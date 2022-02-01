@@ -1,6 +1,6 @@
 using Genie, Genie.Renderer.Html, Stipple, StipplePlotly
 
-pd(name) = PlotData(
+pd(x, y, name) = PlotData(
     x = [
         "Jan2019",
         "Feb2019",
