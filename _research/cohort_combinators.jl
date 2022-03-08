@@ -1,5 +1,12 @@
+using DrWatons
+@quickactivate "MentalHealthEquity"
+
+using CSV
+using DataFrames
 using DBInterface
 using LibPQ
+using MentalHealthEquity
+using FunSQL
 using FunSQL:
     SQLTable,
     Agg,
@@ -12,9 +19,17 @@ using FunSQL:
     Join,
     Order,
     Select,
+    WithExternal,
     Where,
     render,
-    Limit
+    Limit,
+    ID
+
+conn = LibPQ.Connection("host=data.hdap.gatech.edu port=5442 user=mimic_v531 password=i3lworks")   
+
+inpatient_codes = get_atlas_concept_set(
+    read(datadir("exp_raw", "queries", "inpatient_cohort.json"), String),
+)
 
 allergy_observation_concepts = schema_info[:allergy_observation_concepts]
 attribute_definition = schema_info[:attribute_definition]
@@ -63,74 +78,18 @@ specimen = schema_info[:specimen]
 visit_detail = schema_info[:visit_detail]
 visit_occurrence = schema_info[:visit_occurrence]
 vocabulary = schema_info[:vocabulary]
+function PatientVisitFilter(q; visit_codes, tab = visit_occurrence)
 
-function PatientVisitFilter(visit_codes; tab = visit_occurrence, features = nothing)
-
-    q = From(tab) |> Where(Fun.in(Get.visit_concept_id, visit_codes...))
-
-    if !isnothing(features)
-        groups = [Get[f] for f in features]
-        q = q |> Group(groups...)
-    else
-        return q
-    end
+    q |> Where(Fun.in(Get.visit_concept_id, visit_codes...))
 
 end
+function PatientConditionFilter(q; condition_codes, tab = condition_occurrence)
 
-function JoinOnColumn(input_table, join_table, input_cols; column = :person_id)
-
-    #=
-
-    NOTE: the kwarg `input_cols` is a hack
-    It should really be a lot more generalized but right now, one must provide
-    the columns for the input query.
-
-    =#
-
-    input_table |>
-    Join(
-        From(join_table) |> As(:join_table),
-        on = Get.join_table[column] .== Get[column],
-    ) |>
-    Select(
-        Get.(input_cols)...,
-        Get.(filter(!in(input_cols), join_table.column_set), over = Get.join_table)...,
-    )
+    q |> Where(Fun.in(Get.condition_concept_id, condition_codes...))
 
 end
-
-function PatientLocation(tab; location_tab = location, features = nothing)
-
-    q =
-        tab |> Join(
-            From(location_tab) |> As(:location_tab),
-            on = Get.location_tab.location_id .== Get.location_id,
-        )
-
-    if !isnothing(features)
-        groups = [Get[f] for f in features]
-        q = q |> Group(groups...)
-        return q
-    else
-        return q
-    end
-
-end
-
-function PatientsByState(tab; location_tab = location, features = nothing)
-
-    PatientLocation(tab; location_tab = location_tab, features = features) |>
-    Group(Get.location_tab.state) |>
-    Select(Get.state, Agg.count())
-
-end
-
-PatientVisitFilter(inpatient_codes) |>
-Limit(100) |>
-x -> JoinOnColumn(x, person, visit_occurrence.column_set) |> PatientsByState
-
 function PatientAgeGroup(
-    tab;
+    q;
     initial_date = :year_of_birth,
     final_date = :observation_period_end_date,
     age_groupings = [
@@ -152,116 +111,86 @@ function PatientAgeGroup(
         push!(age_arr, "$(grp[1]) - $(grp[2])")
     end
 
-    q =
-        tab |>
+        q |>
         Define(
             :age => Fun.date_part(
                 "year",
-                Fun.age(Get[final_date], Fun.make_date(Get[initial_date], 1, 1)),
+                Fun.age(Fun.to_date(Get[final_date], "YYYY-MM-DD"), Fun.make_date(Get[initial_date], 1, 1)),
             ),
         ) |>
         Define(:age_group => Fun.case(age_arr...))
 
-    return q
-
 end
 
-function PatientsByAgeGroup(
-    tab;
-    initial_date = :year_of_birth,
-    final_date = :observation_period_end_date,
-    age_groupings = [
-        [0, 9],
-        [10, 19],
-        [20, 29],
-        [30, 39],
-        [40, 49],
-        [50, 59],
-        [60, 69],
-        [70, 79],
-        [80, 89],
-    ],
-)
+function JoinOnColumn(q; join_table, column = :person_id, over = nothing)
 
-    PatientAgeGroup(
-        tab;
-        initial_date = initial_date,
-        final_date = final_date,
-        age_groupings = age_groupings,
-    ) |>
-    Group(Get.age_group) |>
-    Select(Get.age_group, Agg.count())
+    columns = setdiff(join_table.column_set, column_logger) |> collect
+    push!(column_logger, columns...)
+    push!(table_logger, [join_table.name, columns])
+
+    if isnothing(over)
+    q |>
+    Join(
+	From(join_table),
+        on = Get[over][column] .== Get[column],
+    ) |> return
+    end
+    q |>
+    Join(
+	From(join_table),
+        on = Get[over][column] .== Get[column],
+    )
 
 end
+function SelectAllColumns(q)
+ columns = []
+ for idx in 1:length(table_logger)
+     get_names = []
+         for group in table_logger[end:-1:idx]
+             push!(get_names, group[1])
+         end
+     group_get = Get(get_names[1])
+     if length(get_names) != 1
+	for name in get_names[2:end]
+		group_get = group_get |> Get(name)
+	end
+     end
+     push!(columns, [group_get[x] for x in table_logger[idx][2]]...)
+ end
 
-PatientVisitFilter(inpatient_codes) |>
-Limit(100) |>
-x ->
-    JoinOnColumn(x, observation_period, visit_occurrence.column_set) |>
-    x ->
-        JoinOnColumn(
-            x,
-            person,
-            union(visit_occurrence.column_set, observation_period.column_set),
-        ) |>
-        PatientsByAgeGroup |>
-        render |>
-        x -> LibPQ.execute(conn, x) |> DataFrame
-
-function PatientsByRace(tab)
-
-    tab |> Group(Get.race_concept_id) |> Select(Get.race_concept_id, Agg.count())
-
+    q |> Select(columns...)
 end
 
+global table_logger = [[visit_occurrence.name, collect(visit_occurrence.column_set)]]
+global column_logger = [collect(visit_occurrence.column_set)...]
 
-PatientVisitFilter(inpatient_codes) |>
-Limit(100) |>
-x -> JoinOnColumn(x, person, visit_occurrence.column_set) |>
-x -> JoinOnColumn(x, location, union(visit_occurrence.column_set, person.column_set); column = :location_id) |>
-PatientsByRace |>
+df = From(visit_occurrence) |>
+# Limit(1000) |> 
+x -> PatientVisitFilter(x, visit_codes = inpatient_codes) |> 
+As(:visit_occurrence) |>
+x -> JoinOnColumn(x, join_table = person, over = :visit_occurrence) |>
+As(:person) |>
+x -> JoinOnColumn(x, join_table = condition_occurrence, over = :person) |>
+x -> PatientConditionFilter(x, condition_codes = bipolar_df.CONCEPT_ID) |> 
+As(:condition_occurrence) |> 
+SelectAllColumns |> 
+# Group(Get.person_id) |> 
+Select(Get.person_id, Get.care_site_id, Get.location_id, Get.race_source_value, Get.gender_source_value, Get.condition_source_value) |> 
 render |>
-x -> LibPQ.execute(conn, x) |> DataFrame
+x -> LibPQ.execute(conn, x) # |>
+DataFrame
 
-function PatientsByGender(tab)
+global table_logger = [[person.name, collect(person.column_set)]]
+global column_logger = [collect(person.column_set)...]
 
-    tab |> Group(Get.gender_concept_id) |> Select(Get.gender_concept_id, Agg.count())
-
-end
-
-PatientVisitFilter(inpatient_codes) |>
-Limit(100) |>
-x -> JoinOnColumn(x, person, visit_occurrence.column_set) |>
-PatientsByGender |>
-render |>
-x -> LibPQ.execute(conn, x) |> DataFrame
-
-
-
-function PatientsByCondition(tab)
-
-    tab |> Group(Get.condition_concept_id) |> Select(Get.condition_concept_id, Agg.count())
-
-end
-
-PatientVisitFilter(inpatient_codes) |>
-Limit(100) |>
-x -> JoinOnColumn(x, condition_occurrence, visit_occurrence.column_set) |>
-PatientsByCondition |>
-render |>
-x -> LibPQ.execute(conn, x) |> DataFrame
-
-function PatientsByCareSite(tab)
-
-    tab |> Group(Get.place_of_service_concept_id) |> Select(Get.place_of_service_concept_id, Agg.count())
-
-end
-
-PatientVisitFilter(inpatient_codes) |>
-Limit(100) |>
-x -> JoinOnColumn(x, care_site, visit_occurrence.column_set; column = :care_site_id) |>
-PatientsByCareSite |>
-render |>
-x -> LibPQ.execute(conn, x) |> DataFrame
-
-PatientVisitFilter(inpatient_codes) |> 
+From(person) |>
+Limit(z) |>
+As(:person) |>
+x -> JoinOnColumn(x, join_table = visit_occurrence, over = :person) |>
+As(:visit_occurrence) |>
+x -> JoinOnColumn(x, join_table = condition_occurrence, over = :visit_occurrence) |>
+As(:condition_occurrence) |> 
+# Select(Get.condition_occurrence.person.location_id) |> 
+# Select(Get.condition_occurrence.person.visit_occurrence.visit_occurrence_id) |> 
+SelectAllColumns |> 
+render
