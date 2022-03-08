@@ -106,7 +106,7 @@ function ui(model::StudyModel)
                         }
                         """),
         [
-            heading("Study Data Explorer and the Awesomeness of Genie")
+            heading("Study Data Explorer")
             row(
                 cell(
                     class = "container",

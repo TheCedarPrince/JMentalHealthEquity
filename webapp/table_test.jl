@@ -2,7 +2,21 @@ using DataFrames
 using Stipple
 using StippleUI
 
-import RDatasets: dataset
+sources = ["University 1", "University 2", "Hospital 1"]
+conditions = ["Bipolar Disorder", "Depression", "Suicidality"]
+sexes = ["Male", "Female"]
+races = ["Black", "Caucasian", "Asian"]
+age_groups = [
+    "0 - 9",
+    "10 - 19",
+    "20 - 29",
+    "30 - 39",
+    "40 - 49",
+    "50 - 59",
+    "60 - 69",
+    "70 - 79",
+    "80 - 89",
+]
 
 WEB_TRANSPORT = Genie.WebChannels
 
