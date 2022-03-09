@@ -78,16 +78,19 @@ specimen = schema_info[:specimen]
 visit_detail = schema_info[:visit_detail]
 visit_occurrence = schema_info[:visit_occurrence]
 vocabulary = schema_info[:vocabulary]
+
 function PatientVisitFilter(q; visit_codes, tab = visit_occurrence)
 
     q |> Where(Fun.in(Get.visit_concept_id, visit_codes...))
 
 end
+
 function PatientConditionFilter(q; condition_codes, tab = condition_occurrence)
 
     q |> Where(Fun.in(Get.condition_concept_id, condition_codes...))
 
 end
+
 function PatientAgeGroup(
     q;
     initial_date = :year_of_birth,
@@ -142,6 +145,7 @@ function JoinOnColumn(q; join_table, column = :person_id, over = nothing)
     )
 
 end
+
 function SelectAllColumns(q)
  columns = []
  for idx in 1:length(table_logger)
