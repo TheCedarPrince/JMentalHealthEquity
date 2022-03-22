@@ -1,8 +1,11 @@
+using DrWatson
+@quickactivate "MentalHealthEquity"
+
 using DBInterface
 using LibPQ
 using OHDSICohortExpressions: translate, Model
 
-cohort = read("depression_total.json", String)
+cohort = read("_research/depression_total.json", String)
 
 model = Model(
     cdm_version = v"5.3.1",
