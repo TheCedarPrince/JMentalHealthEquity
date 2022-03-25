@@ -5,6 +5,7 @@ using CSV
 using DataFrames
 using DBInterface
 using LibPQ
+using Memoization
 using MentalHealthEquity
 using FunSQL
 using FunSQL:
@@ -25,15 +26,7 @@ using FunSQL:
     Limit,
     ID,
     LeftJoin
-
-inpatient_codes = get_atlas_concept_set(
-    read(datadir("exp_raw", "queries", "inpatient_cohort.json"), String),
-)
-
-bipolar_df = CSV.read(
-    datadir("exp_raw", "concept_sets", "bipolar_disorder_concept_set.csv"),
-    DataFrame,
-)
+using Term.progress
 
 schema_info = introspect(conn; schema = :synpuf5)
 
@@ -236,29 +229,156 @@ function GetDatabasePersonIDs(;tab = person)
 
 end
 
-function VisitFilterPersonIDs(;visit_codes, tab = visit_occurrence)
-    ids = From(tab) |> Where(Fun.in(Get.visit_concept_id, visit_codes...)) |> Group(Get.person_id) |> render |> x -> LibPQ.execute(conn, x) |> DataFrame
+@memoize Dict function VisitFilterPersonIDs(; visit_codes, tab = visit_occurrence)
+    ids =
+        From(tab) |>
+        Where(Fun.in(Get.visit_concept_id, visit_codes...)) |>
+        Group(Get.person_id) |>
+        render |>
+        x -> LibPQ.execute(conn, x) |> DataFrame
 
     return ids.person_id
 
 end
 
-function ConditionFilterPersonIDs(;condition_codes, tab = condition_occurrence)
-    ids = From(tab) |> Where(Fun.in(Get.condition_concept_id, condition_codes...)) |> Group(Get.person_id) |> render |> x -> LibPQ.execute(conn, x) |> DataFrame
+@memoize Dict function ConditionFilterPersonIDs(;
+    condition_codes,
+    tab = condition_occurrence,
+)
+    ids =
+        From(tab) |>
+        Where(Fun.in(Get.condition_concept_id, condition_codes...)) |>
+        Group(Get.person_id) |>
+        render |>
+        x -> LibPQ.execute(conn, x) |> DataFrame
 
     return ids.person_id
 
 end
 
-function IntersectPersonIDs(;id_list)
-	
-	ids = intersect(id_list...)
+@memoize Dict function RaceFilterPersonIDs(; race_codes, tab = person)
+    ids =
+        From(tab) |>
+        Where(Fun.in(Get.race_concept_id, race_codes...)) |>
+        Group(Get.person_id) |>
+        render |>
+        x -> LibPQ.execute(conn, x) |> DataFrame
 
-	return ids
+    return ids.person_id
 
 end
 
-function GetPatientAgeGroup(;
+@memoize Dict function GenderFilterPersonIDs(; gender_codes, tab = person)
+    ids =
+        From(tab) |>
+        Where(Fun.in(Get.gender_concept_id, gender_codes...)) |>
+        Group(Get.person_id) |>
+        render |>
+        x -> LibPQ.execute(conn, x) |> DataFrame
+
+    return ids.person_id
+
+end
+
+@memoize Dict function StateFilterPersonIDs(; states, tab = location, join_tab = person)
+    ids =
+        From(tab) |>
+        Select(Get.location_id, Get.state) |>
+        Where(Fun.in(Get.state, states...)) |>
+        Join(:join => join_tab, Get.location_id .== Get.join.location_id) |>
+        Select(Get.join.person_id) |>
+        render |>
+        x -> LibPQ.execute(conn, x) |> DataFrame
+
+    return ids.person_id
+
+end
+
+@memoize Dict function GetPatientState(; ids, tab = location, join_tab = person)
+    df =
+        From(tab) |>
+        Select(Get.location_id, Get.state) |>
+        Join(:join => join_tab, Get.location_id .== Get.join.location_id) |>
+        Where(Fun.in(Get.join.person_id, ids...)) |>
+        Select(Get.join.person_id, Get.state) |>
+        render |>
+        x -> LibPQ.execute(conn, x) |> DataFrame
+
+    return df
+
+end
+
+@memoize Dict function GetPatientGender(; ids, tab = person)
+    df =
+        From(tab) |>
+        Where(Fun.in(Get.person_id, ids...)) |>
+        Select(Get.person_id, Get.gender_concept_id) |>
+        render |>
+        x -> LibPQ.execute(conn, x) |> DataFrame
+
+    return df
+
+end
+
+@memoize Dict function GetPatientRace(; ids, tab = person)
+    df =
+        From(tab) |>
+        Where(Fun.in(Get.person_id, ids...)) |>
+        Select(Get.person_id, Get.race_concept_id) |>
+        render |>
+        x -> LibPQ.execute(conn, x) |> DataFrame
+
+    return df
+
+end
+
+function IntersectPersonIDs(; id_list)
+
+    ids = intersect(id_list...)
+
+    return ids
+
+end
+
+@memoize Dict function AgeGroupFilterPersonIDs(; age_groupings, tab = person)
+
+    age_arr = []
+    age_ranges = []
+    for grp in age_groupings
+        push!(age_arr, Get.age .< grp[2] + 1)
+        push!(age_arr, "$(grp[1]) - $(grp[2])")
+        push!(age_ranges, "$(grp[1]) - $(grp[2])")
+    end
+
+    ids =
+        From(person) |>
+        LeftJoin(
+            :observation_group => From(observation_period) |> Group(Get.person_id),
+            on = Get.person_id .== Get.observation_group.person_id,
+        ) |>
+        Select(
+            Get.person_id,
+            Fun.make_date(Get.year_of_birth, Get.month_of_birth, Get.day_of_birth) |>
+            As(:dob),
+            Get.observation_group |>
+            Agg.max(Get.observation_period_end_date) |>
+            As(:record),
+        ) |>
+        Select(
+            Get.person_id,
+            :age => Fun.date_part("year", Fun.age(Get.record, Get.dob)),
+        ) |>
+        Define(:age_group => Fun.case(age_arr...)) |>
+        Where(Fun.in(Get.age_group, age_ranges...)) |>
+        Select(Get.person_id) |>
+        render |>
+        x -> LibPQ.execute(conn, x) |> DataFrame
+
+    return ids.person_id
+
+end
+
+@memoize Dict function GetPatientAgeGroup(;
     ids,
     age_groupings = [
         [0, 9],
@@ -298,62 +418,180 @@ function GetPatientAgeGroup(;
 
 end
 
-# Separately calculate difficult queries and store them in Dictionaries
+function generate_cohort(;
+    visit_codes = nothing,
+    condition_codes = nothing,
+    race_codes = nothing,
+    location_codes = nothing,
+    gender_codes = nothing,
+    age_groupings = nothing,
+)
+    filter_list = []
 
-GetPatientAgeGroup
-GetPatientLocation
-GetPatientVisits
+    !isnothing(visit_codes) &&
+        push!(filter_list, VisitFilterPersonIDs(; visit_codes = visit_codes))
+    !isnothing(condition_codes) &&
+        push!(filter_list, ConditionFilterPersonIDs(; condition_codes = condition_codes))
+    !isnothing(race_codes) &&
+        push!(filter_list, RaceFilterPersonIDs(; race_codes = race_codes))
+    !isnothing(location_codes) &&
+        push!(filter_list, StateFilterPersonIDs(; state_codes = state_codes))
+    !isnothing(gender_codes) &&
+        push!(filter_list, GenderFilterPersonIDs(; gender_codes = gender_codes))
 
-# Filter the database based on constraints to get granular necessary cohorts
+    !isnothing(age_groupings[1]) &&
+        push!(filter_list, AgeGroupFilterPersonIDs(; age_groupings = age_groupings))
 
-VisitFilterPersonIDs
-ConditionFilterPersonIDs
-RaceFilterPersonIDs
-AgeGroupFilterPersonIDs
+    IntersectPersonIDs(id_list = filter_list)
 
-# Find intersecting ids across constraints to generate final cohort
-
-IntersectPersonIDs
-
-# Group and compute counts or other necessary statistics
-
-
+end
 
 function run_study(;
-    input_table = person,
-    visit_codes = nothing,
+    cohort_ids,
+    by_state = false,
+    by_gender = false,
+    by_race = false,
+    by_age_group = false,
 )
 
-    query = From(input_table)
-
-    filter_list = []
     characteristics = Dict()
 
-    !isnothing(visit_codes) && push!(filter_list, VisitFilterPersonIDs(; visit_codes = visit_codes))
-    !isnothing(condition_codes) && push!(filter_list, ConditionFilterPersonIDs(; condition_codes = condition_codes)) # TODO
-    !isnothing(race_codes) && push!(filter_list, RaceFilterPersonIDs(; race_codes = race_codes)) # TODO
-    !isnothing(location_codes) && push!(filter_list, LocationFilterPersonIDs(; location_codes = location_codes)) # TODO
-    !isnothing(age_groupings) && push!(filter_list, AgeGroupFilterPersonIDs(; age_grouping = age_grouping))
-    !isnothing(gender_codes) && push!(filter_list, GenderGroupFilterPersonIDs(; gender_codes = gender_codes)) # TODO
-    # Age group filtering will also calculate age but will not be used in getting the age group result
-    
-    cohort_ids = IntersectPersonIDs(filter_list)
-    
-    by_location && push!(characteristics, :location => GetPatientLocation) # TODO
-    by_gender && push!(characteristics, :gender => GetPatientGender) # TODO
-    by_race && push!(characteristics, :race => GetPatientRace) # TODO
-    by_age_group && push!(characteristics, :age_group => GetPatientAgeGroup) # TODO
+    by_state && push!(characteristics, :state => GetPatientState(ids = cohort_ids))
+    by_gender && push!(characteristics, :gender => GetPatientGender(ids = cohort_ids))
+    by_race && push!(characteristics, :race => GetPatientRace(ids = cohort_ids))
+    by_age_group &&
+        push!(characteristics, :age_group => GetPatientAgeGroup(ids = cohort_ids))
 
-    # TODO 
     df = DataFrame(:person_id => cohort_ids)
-    for feature in characteristics 
-	Join(feature, df, on = :person_id => :person_id)    	
+    for feature in keys(characteristics)
+        df = innerjoin(df, characteristics[feature], on = :person_id)
     end
-    	
-    # TODO
-    From(df) |> Group([Get everything but person_id]) |> Select(Agg.count())
 
     return df
 
 end
 
+function comply(; data, hitech = true)
+    cols = filter(x -> x != :person_id, propertynames(data))
+    df = groupby(data, cols) |> x -> combine(x, nrow => :count)
+
+    hitech && filter!(row -> row.count >= 11, df)
+
+    return df
+
+end
+
+###############################
+# DEFINE PATIENT VISITS
+###############################
+
+inpatient_codes = get_atlas_concept_set(
+           read(datadir("exp_raw", "queries", "inpatient_cohort.json"), String),
+           )
+
+outpatient_codes = get_atlas_concept_set(read(datadir("exp_raw", "queries", "outpatient_cohort.json"), String))
+
+visit_codes = [inpatient_codes, outpatient_codes, nothing]
+
+###############################
+# DEFINE PATIENT CONDITIONS
+###############################
+
+bipolar_df = CSV.read(
+    datadir("exp_raw", "concept_sets", "bipolar_disorder_concept_set.csv"),
+    DataFrame,
+)
+
+suicidality_df =
+    CSV.read(datadir("exp_raw", "concept_sets", "suicidality_concept_set.csv"), DataFrame)
+
+depression_df =
+    CSV.read(datadir("exp_raw", "concept_sets", "depression_concept_set.csv"), DataFrame)
+
+condition_codes =
+    [bipolar_df.CONCEPT_ID, depression_df.CONCEPT_ID, suicidality_df.CONCEPT_ID, nothing]
+
+###############################
+# DEFINE PATIENT RACES
+###############################
+
+races =
+    From(person) |>
+    Group(Get.race_concept_id) |>
+    render |>
+    x -> LibPQ.execute(conn, x) |> DataFrame
+
+race_codes = vcat(races.race_concept_id, nothing)
+
+###############################
+# DEFINE PATIENT AGE GROUPS
+###############################
+
+age_groups = [
+    [0, 9],
+    [10, 19],
+    [20, 29],
+    [30, 39],
+    [40, 49],
+    [50, 59],
+    [60, 69],
+    [70, 79],
+    [80, 89],
+    nothing,
+]
+
+###############################
+# DEFINE PATIENT GENDERS
+###############################
+
+gender_codes = [8507, 8532, nothing]
+
+###############################
+# RUN THE STUDY
+###############################
+
+cohorts = collect(
+    Iterators.product(visit_codes, condition_codes, gender_codes, race_codes, age_groups),
+);
+
+test = []
+
+counter = 1
+for (visit, condition, gender, race, age_group) in cohorts
+
+    ids = generate_cohort(
+        visit_codes = visit,
+        condition_codes = condition,
+        gender_codes = gender,
+        race_codes = race,
+        age_groupings = [age_group],
+    )
+    push!(cohorts, ids)
+
+    println("Current cohort: $counter")
+    counter += 1
+
+end
+
+for (idx, cohort) in enumerate(cohort_ids)
+
+definition = cohorts[idx]
+
+run_study(;
+    cohort,
+    by_visit = isnothing(definition[1]) ? false : true, # TODO: Add this feature
+    by_state = isnothing(definition[2]) ? false : true,
+    by_gender = isnothing(definition[3]) ? false : true,
+    by_race = isnothing(definition[4]) ? false : true,
+    by_age_group = isnothing(definition[5]) ? false : true,
+)
+
+end
+
+# TODO: Add documentation to functions
+# TODO: Add documentation for writer Monad for auditing functions
+# TODO: Push documentation of writer Monad to list
+# TODO: Push individual SQL queries as list
+# TODO: Move Filter functions to MentalHealthEquity package
+# TODO: Move Get functions to MentalHealthEquity package
+# TODO: Remove old code from here
