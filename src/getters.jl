@@ -1,0 +1,200 @@
+"""
+	GetDatabasePersonIDs(; tab::SQLTable = person)
+
+Get all unique `person_id`'s from a database.
+
+# Keyword Arguments:
+
+- `tab::SQLTable` - the `SQLTable` representing the Person table; default `person`
+
+# Returns
+
+- `ids::Vector{Int64}` - the list of persons
+"""
+@memoize Dict function GetDatabasePersonIDs(conn; tab = person)
+    ids = From(tab) |> Group(Get.person_id) |> render |> x -> DBInterface.execute(conn, x) |> DataFrame
+
+    return convert(Vector{Int}, ids.person_id)
+
+end
+
+"""
+	GetPatientState(ids::Vector{T} where T<:Integer, conn; tab::SQLTable = location, join_tab::SQLTable = person)
+
+Given a list of person IDs, find their home state.
+
+# Arguments:
+
+`ids::Vector{T} where T<:Integer` - list of `person_id`'s; each ID must be of subtype `Integer`
+
+# Keyword Arguments:
+
+- `tab::SQLTable` - the `SQLTable` representing the Location table; default `location`
+- `join_tab::SQLTable` - the `SQLTable` representing the Person table; default `person`
+
+# Returns
+
+- `df::DataFrame` - a two column `DataFrame` comprised of columns: `:person_id` and `:state`
+"""
+@memoize Dict function GetPatientState(ids::Vector{T} where T<:Integer, conn; tab = location, join_tab = person)
+    df =
+        From(tab) |>
+        Select(Get.location_id, Get.state) |>
+        Join(:join => join_tab, Get.location_id .== Get.join.location_id) |>
+        Where(Fun.in(Get.join.person_id, ids...)) |>
+        Select(Get.join.person_id, Get.state) |>
+        render |>
+        x -> DBInterface.execute(conn, x) |> DataFrame
+
+    return df
+
+end
+
+"""
+	GetPatientGender(ids::Vector{T} where T<:Integer; tab::SQLTable = person)
+
+Given a list of person IDs, find their gender.
+
+# Arguments:
+
+`ids::Vector{T} where T<:Integer` - list of `person_id`'s; each ID must be of subtype `Integer`
+
+# Keyword Arguments:
+
+- `tab::SQLTable` - the `SQLTable` representing the Person table; default `person`
+
+# Returns
+
+- `df::DataFrame` - a two column `DataFrame` comprised of columns: `:person_id` and `:gender_concept_id`
+"""
+@memoize Dict function GetPatientGender(ids::Vector{T} where T<:Integer, conn; tab = person)
+    df =
+        From(tab) |>
+        Where(Fun.in(Get.person_id, ids...)) |>
+        Select(Get.person_id, Get.gender_concept_id) |>
+        render |>
+        x -> DBInterface.execute(conn, x) |> DataFrame
+
+    return df
+
+end
+
+"""
+	GetPatientRace(ids::Vector{T} where T<:Integer; tab::SQLTable = person)
+
+Given a list of person IDs, find their race.
+
+# Arguments:
+
+`ids::Vector{T} where T<:Integer` - list of `person_id`'s; each ID must be of subtype `Integer`
+
+# Keyword Arguments:
+
+- `tab::SQLTable` - the `SQLTable` representing the Person table; default `person`
+
+# Returns
+
+- `df::DataFrame` - a two column `DataFrame` comprised of columns: `:person_id` and `:race_concept_id`
+"""
+@memoize Dict function GetPatientRace(ids::Vector{T} where T<:Integer, conn; tab = person)
+    df =
+        From(tab) |>
+        Where(Fun.in(Get.person_id, ids...)) |>
+        Select(Get.person_id, Get.race_concept_id) |>
+        render |>
+        x -> DBInterface.execute(conn, x) |> DataFrame
+
+    return df
+
+end
+
+"""
+GetPatientAgeGroup(
+    ids::Vector{T} where {T<:Integer};
+    age_groupings::Vector{Vector{T}} where {T<:Integer} = [
+        [0, 9],
+        [10, 19],
+        [20, 29],
+        [30, 39],
+        [40, 49],
+        [50, 59],
+        [60, 69],
+        [70, 79],
+        [80, 89],
+    ],
+    tab::SQLTable = person,
+    join_tab::SQLTable = observation_period,
+)
+
+Finds all individuals in age groups as specified by `age_groupings`.
+
+# Arguments:
+
+`ids::Vector{T} where T<:Integer` - list of `person_id`'s; each ID must be of subtype `Integer`
+- `age_groupings::Vector{Vector{T}} where T<:Integer` - a vector of age groups of the form `[[10, 19], [20, 29],]` denoting an age group of 10 - 19 and 20 - 29 respectively; age values must subtype of `Integer`
+
+# Keyword Arguments:
+
+- `age_groupings::Vector{Vector{T}} where T<:Integer` - a vector of age groups of the form `[[10, 19], [20, 29],]` denoting an age group of 10 - 19 and 20 - 29 respectively; age values must subtype of `Integer`
+- `tab::SQLTable` - the `SQLTable` representing the Person table; default `person`
+- `join_tab::SQLTable` - the `SQLTable` representing the Observation Period table; default `observation_period`
+
+# Returns
+
+- `df::DataFrame` - a two column `DataFrame` comprised of columns: `:person_id` and `:age_group`
+"""
+@memoize Dict function GetPatientAgeGroup(
+    ids::Vector{T} where {T<:Integer}, conn;
+    age_groupings::Vector{Vector{T}} where {T<:Integer} = [
+        [0, 9],
+        [10, 19],
+        [20, 29],
+        [30, 39],
+        [40, 49],
+        [50, 59],
+        [60, 69],
+        [70, 79],
+        [80, 89],
+    ],
+    tab::SQLTable = person,
+    join_tab::SQLTable = observation_period,
+)
+    age_arr = []
+    for grp in age_groupings
+        push!(age_arr, Get.age .< grp[2] + 1)
+        push!(age_arr, "$(grp[1]) - $(grp[2])")
+    end
+
+    From(tab) |>
+    Where(Fun.in(Get.person_id, ids...)) |>
+    LeftJoin(
+        :observation_group => From(join_tab) |> Group(Get.person_id),
+        on = Get.person_id .== Get.observation_group.person_id,
+    ) |>
+    Select(
+        Get.person_id,
+        Fun.make_date(Get.year_of_birth, Get.month_of_birth, Get.day_of_birth) |> As(:dob),
+        Get.observation_group |> Agg.max(Get.observation_period_end_date) |> As(:record),
+    ) |>
+    Select(Get.person_id, :age => Fun.date_part("year", Fun.age(Get.record, Get.dob))) |>
+    Define(:age_group => Fun.case(age_arr...)) |>
+    Select(Get.person_id, Get.age_group) |>
+    render |>
+    x -> DBInterface.execute(conn, x) |> DataFrame
+
+end
+
+"""
+TODO: Add documentation later
+"""
+@memoize Dict function GetPatientVisits(ids::Vector{T} where {T<:Integer}, conn; tab::SQLTable = visit_occurrence)
+    df =
+        From(tab) |>
+        Where(Fun.in(Get.person, ids...)) |>
+        Select(Get.person_id, Get.visit_concept_id) |>
+        render |>
+        x -> DBInterface.execute(conn, x) |> DataFrame
+
+    return df
+
+end
