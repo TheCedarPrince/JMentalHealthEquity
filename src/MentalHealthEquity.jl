@@ -1,18 +1,41 @@
 module MentalHealthEquity
 
-using DrWatson
+using DataFrames
+using DBInterface
 using FunSQL
-using FunSQL: SQLTable, render, Get, Select
+using FunSQL:
+    SQLTable,
+    Agg,
+    As,
+    Define,
+    From,
+    Fun,
+    Get,
+    Group,
+    Join,
+    Order,
+    Select,
+    WithExternal,
+    Where,
+    render,
+    Limit,
+    ID,
+    LeftJoin,
+    reflect
 using LibPQ
+using Memoization
 using HTTP
 using JSON3
-using Tables
-using ZipFile
 
-include("structs.jl")
-include("constants.jl")
-include("atlasUtilities.jl")
-include("funsql_blocks.jl")
 include("utilities.jl")
+
+# include("structs.jl")
+# include("constants.jl")
+include("atlasUtilities.jl")
+# include("funsql_blocks.jl")
+include("getters.jl")
+include("filters.jl")
+include("executors.jl")
+include("generators.jl")
 
 end
