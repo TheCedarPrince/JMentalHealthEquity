@@ -23,6 +23,7 @@ using FunSQL:
     LeftJoin,
     reflect
 using LibPQ
+using MySQL
 using Memoization
 using HTTP
 using JSON3
