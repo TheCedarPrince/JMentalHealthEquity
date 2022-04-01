@@ -12,7 +12,7 @@ Get all unique `person_id`'s from a database.
 - `ids::Vector{Int64}` - the list of persons
 """
 @memoize Dict function GetDatabasePersonIDs(conn; tab = person)
-    ids = From(tab) |> Group(Get.person_id) |> q -> q -> render(q, dialect = dialect)(q, dialect = dialect) |> x -> DBInterface.execute(conn, String(x)) |> DataFrame
+    ids = From(tab) |> Group(Get.person_id) |> q -> render(q, dialect = dialect) |> x -> DBInterface.execute(conn, String(x)) |> DataFrame
 
     return convert(Vector{Int}, ids.person_id)
 
@@ -43,7 +43,7 @@ Given a list of person IDs, find their home state.
         Join(:join => join_tab, Get.location_id .== Get.join.location_id) |>
         Where(Fun.in(Get.join.person_id, ids...)) |>
         Select(Get.join.person_id, Get.state) |>
-        q -> q -> render(q, dialect = dialect)(q, dialect = dialect) |>
+        q -> render(q, dialect = dialect) |>
         x -> DBInterface.execute(conn, String(x)) |> DataFrame
 
     return df
@@ -72,7 +72,7 @@ Given a list of person IDs, find their gender.
         From(tab) |>
         Where(Fun.in(Get.person_id, ids...)) |>
         Select(Get.person_id, Get.gender_concept_id) |>
-        q -> q -> render(q, dialect = dialect)(q, dialect = dialect) |>
+        q -> render(q, dialect = dialect) |>
         x -> DBInterface.execute(conn, String(x)) |> DataFrame
 
     return df
@@ -101,7 +101,7 @@ Given a list of person IDs, find their race.
         From(tab) |>
         Where(Fun.in(Get.person_id, ids...)) |>
         Select(Get.person_id, Get.race_concept_id) |>
-        q -> q -> render(q, dialect = dialect)(q, dialect = dialect) |>
+        q -> render(q, dialect = dialect) |> 
         x -> DBInterface.execute(conn, String(x)) |> DataFrame
 
     return df
@@ -179,7 +179,7 @@ Finds all individuals in age groups as specified by `age_groupings`.
     Select(Get.person_id, :age => Fun.date_part("year", Fun.age(Get.record, Get.dob))) |>
     Define(:age_group => Fun.case(age_arr...)) |>
     Select(Get.person_id, Get.age_group) |>
-    q -> q -> render(q, dialect = dialect)(q, dialect = dialect) |>
+    q -> render(q, dialect = dialect) |>
     x -> DBInterface.execute(conn, String(x)) |> DataFrame
 
 end
@@ -192,7 +192,7 @@ TODO: Add documentation later
         From(tab) |>
         Where(Fun.in(Get.person, ids...)) |>
         Select(Get.person_id, Get.visit_concept_id) |>
-        q -> q -> render(q, dialect = dialect)(q, dialect = dialect) |>
+        q -> render(q, dialect = dialect) |>
         x -> DBInterface.execute(conn, String(x)) |> DataFrame
 
     return df

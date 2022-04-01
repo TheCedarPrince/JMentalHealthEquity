@@ -74,7 +74,7 @@ function GenerateConnectionDetails(conn;
     schema = nothing
 )
 
-    global dialect = dialect
+    @eval global dialect = $(QuoteNode(dialect))
     if dialect == :postgresql
         db_info = reflect(conn; schema = schema, dialect = dialect)
 
