@@ -20,8 +20,8 @@ Given a list of visit concept IDs, `visit_codes`  return from the database indiv
         From(tab) |>
         Where(Fun.in(Get.visit_concept_id, visit_codes...)) |>
         Group(Get.person_id) |>
-        render |>
-        x -> DBInterface.execute(conn, x) |> DataFrame
+        q -> render(q, dialect = dialect) |>
+        x -> DBInterface.execute(conn, String(x)) |> DataFrame
 
     return convert(Vector{Int}, ids.person_id)
 
@@ -52,8 +52,8 @@ Given a list of condition concept IDs, `condition_codes`, return from the databa
         From(tab) |>
         Where(Fun.in(Get.condition_concept_id, condition_codes...)) |>
         Group(Get.person_id) |>
-        render |>
-        x -> DBInterface.execute(conn, x) |> DataFrame
+        q -> render(q, dialect = dialect) |>
+        x -> DBInterface.execute(conn, String(x)) |> DataFrame
 
     return convert(Vector{Int}, ids.person_id)
 
@@ -81,8 +81,8 @@ Given a list of condition concept IDs, `race_codes`, return from the database in
         From(tab) |>
         Where(Fun.in(Get.race_concept_id, race_codes...)) |>
         Group(Get.person_id) |>
-        render |>
-        x -> DBInterface.execute(conn, x) |> DataFrame
+        q -> render(q, dialect = dialect) |>
+        x -> DBInterface.execute(conn, String(x)) |> DataFrame
 
     return convert(Vector{Int}, ids.person_id)
 
@@ -110,8 +110,8 @@ Given a list of visit concept IDs, `gender_codes` return from the database indiv
         From(tab) |>
         Where(Fun.in(Get.gender_concept_id, gender_codes...)) |>
         Group(Get.person_id) |>
-        render |>
-        x -> DBInterface.execute(conn, x) |> DataFrame
+        q -> render(q, dialect = dialect) |>
+        x -> DBInterface.execute(conn, String(x)) |> DataFrame
 
     return convert(Vector{Int}, ids.person_id)
 
@@ -142,8 +142,8 @@ Given a list of states, `states`, return from the database individuals found in 
         Where(Fun.in(Get.state, states...)) |>
         Join(:join => join_tab, Get.location_id .== Get.join.location_id) |>
         Select(Get.join.person_id) |>
-        render |>
-        x -> DBInterface.execute(conn, x) |> DataFrame
+        q -> render(q, dialect = dialect) |>
+        x -> DBInterface.execute(conn, String(x)) |> DataFrame
 
     return convert(Vector{Int}, ids.person_id)
 
@@ -198,8 +198,8 @@ Finds all individuals in age groups as specified by `age_groupings`.
         Define(:age_group => Fun.case(age_arr...)) |>
         Where(Fun.in(Get.age_group, age_ranges...)) |>
         Select(Get.person_id) |>
-        render |>
-        x -> DBInterface.execute(conn, x) |> DataFrame
+        q -> render(q, dialect = dialect) |>
+        x -> DBInterface.execute(conn, String(x)) |> DataFrame
 
     return convert(Vector{Int}, ids.person_id)
 

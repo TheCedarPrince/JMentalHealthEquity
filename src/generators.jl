@@ -69,4 +69,29 @@ function GenerateGroupCounts(data::DataFrame)
 
 end
 
-export GenerateCohorts, GenerateGroupCounts, GenerateStudyPopulations
+function GenerateConnectionDetails(conn;
+    dialect = :postgresql,
+    schema = nothing
+)
+
+    global dialect = dialect
+    if dialect == :postgresql
+        db_info = reflect(conn; schema = schema, dialect = dialect)
+
+        for key in keys(db_info.tables)
+            @eval global $(Symbol(key)) = $(db_info[key])
+        end
+    elseif dialect == :mysql
+        db_info = reflect(conn; schema = schema, dialect = dialect)
+
+        for key in keys(db_info.tables)
+            @eval global $(Symbol(key)) = $(db_info[key])
+        end
+
+    end
+        
+    return conn
+
+end
+
+export GenerateCohorts, GenerateConnectionDetails, GenerateGroupCounts, GenerateStudyPopulations
