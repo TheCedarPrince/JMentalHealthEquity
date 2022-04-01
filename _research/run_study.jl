@@ -1,29 +1,47 @@
-using DrWatson
-@quickactivate "MentalHealthEquity"
-
 using CSV
-using DrWatson
+using DBInterface
 using DataFrames
-using FunSQL: From, Get, Group, render
+using FunSQL
+using FunSQL:
+    SQLTable,
+    Agg,
+    As,
+    Define,
+    From,
+    Fun,
+    Get,
+    Group,
+    Join,
+    Order,
+    Select,
+    WithExternal,
+    Where,
+    render,
+    Limit,
+    ID,
+    LeftJoin,
+    reflect
 using LibPQ
 using MentalHealthEquity
 
+conn = DBInterface.connect(LibPQ.Connection, "") 
 
-schema_info = introspect(conn; schema = :synpuf5)
+dialect = :postgresql
 
-for (idx, tbl) in enumerate(propertynames(schema_info) |> collect)
-	@eval global $(Symbol(tbl)) = schema_info[$(idx)]
-end
+MentalHealthEquity.GenerateConnectionDetails(conn,
+    dialect = :postgresql,
+    schema = "synpuf5"
+)
 
 ###############################
 # DEFINE PATIENT VISITS
 ###############################
 
-inpatient_codes = get_atlas_concept_set(
-           read(datadir("exp_raw", "queries", "inpatient_cohort.json"), String),
+inpatient_codes = MentalHealthEquity.get_atlas_concept_set(
+           read("data/exp_raw/queries/inpatient_cohort.json", String),
            )
 
-outpatient_codes = get_atlas_concept_set(read(datadir("exp_raw", "queries", "outpatient_cohort.json"), String))
+outpatient_codes = MentalHealthEquity.get_atlas_concept_set(read("data/exp_raw/queries/outpatient_cohort.json", String))
 
 visit_codes = [inpatient_codes, outpatient_codes, nothing]
 
@@ -32,15 +50,15 @@ visit_codes = [inpatient_codes, outpatient_codes, nothing]
 ###############################
 
 bipolar_df = CSV.read(
-    datadir("exp_raw", "concept_sets", "bipolar_disorder_concept_set.csv"),
-    DataFrame,
+    "data/exp_raw/concept_sets/bipolar_disorder_concept_set.csv",
+    DataFrames.DataFrame,
 )
 
 suicidality_df =
-    CSV.read(datadir("exp_raw", "concept_sets", "suicidality_concept_set.csv"), DataFrame)
+    CSV.read("data/exp_raw/concept_sets/suicidality_concept_set.csv", DataFrames.DataFrame)
 
 depression_df =
-    CSV.read(datadir("exp_raw", "concept_sets", "depression_concept_set.csv"), DataFrame)
+    CSV.read("data/exp_raw/concept_sets/depression_concept_set.csv", DataFrames.DataFrame)
 
 condition_codes =
     [bipolar_df.CONCEPT_ID, depression_df.CONCEPT_ID, suicidality_df.CONCEPT_ID, nothing]
@@ -49,11 +67,14 @@ condition_codes =
 # DEFINE PATIENT RACES
 ###############################
 
+tab_info = FunSQL.reflect(conn, schema = "synpuf5")
+person = tab_info[:person]
+
 races =
-    From(person) |>
-    Group(Get.race_concept_id) |>
-    render |>
-    x -> LibPQ.execute(conn, x) |> DataFrame
+    FunSQL.From(person) |>
+    FunSQL.Group(FunSQL.Get.race_concept_id) |>
+    q -> FunSQL.render(q, dialect = dialect) |>
+    x -> LibPQ.execute(conn, x) |> DataFrames.DataFrame
 
 race_codes = vcat(races.race_concept_id, nothing)
 
@@ -79,12 +100,12 @@ age_groups = [
 ###############################
 
 genders =
-    From(person) |>
-    Group(Get.gender_source_value) |>
-    render |>
-    x -> LibPQ.execute(conn, x) |> DataFrame
+    FunSQL.From(person) |>
+    FunSQL.Group(FunSQL.Get.gender_concept_id) |>
+    q -> FunSQL.render(q, dialect = dialect) |>
+    x -> DBInterface.execute(conn, String(x)) |> DataFrames.DataFrame
 
-gender_codes = vcat(genders.gender_source_value, nothing) |> vals -> filter(x -> !ismissing(x), vals)
+gender_codes = vcat(genders.gender_concept_id, nothing) |> vals -> filter(x -> !ismissing(x), vals)
 
 ###############################
 # RUN THE STUDY
@@ -99,29 +120,27 @@ cohort_ids = []
 counter = 1
 for (visit, condition, gender, race, age_group) in cohort_defs
 
-    ids = GenerateCohorts(
+    ids = MentalHealthEquity.GenerateCohorts(
 	conn;
         visit_codes = visit,
-        condition_codes = condition,
+        condition_codes = condition |> x -> convert(Vector{Int}, x),
         gender_codes = gender,
         race_codes = race,
         age_groupings = [age_group],
     )
     push!(cohort_ids, ids)
 
-    println("Current cohort: $counter")
-    counter += 1
+    break
 
 end
 
 populations = []
 
-counter = 1
 for (idx, cohort) in enumerate(cohort_ids)
 
     definition = cohort_defs[idx]
 
-    df = GenerateStudyPopulations(
+    df = MentalHealthEquity.GenerateStudyPopulations(
         cohort,
         conn;
         # by_visit = isnothing(definition[1]) ? false : true,
@@ -133,40 +152,39 @@ for (idx, cohort) in enumerate(cohort_ids)
 
     push!(populations, df)
 
-    println("Current population: $counter")
-    counter += 1
+    break
 
 end
 
-study_pop = []
-for i in 1:3
+# study_pop = []
+# for i in 1:3
 
-idx = findall(def -> 
-# Find by visit type
-def[1] == visit_codes[i] && 
-# Find by condition type
-def[2] == suicidality_df.CONCEPT_ID && 
-# Find by gender
-def[3] == nothing && 
-# Find by race
-def[4] == nothing && 
-# Find by age group
-def[5] == nothing, 
-cohort_defs)
+# idx = findall(def -> 
+# # Find by visit type
+# def[1] == visit_codes[i] && 
+# # Find by condition type
+# def[2] == suicidality_df.CONCEPT_ID && 
+# # Find by gender
+# def[3] == nothing && 
+# # Find by race
+# def[4] == nothing && 
+# # Find by age group
+# def[5] == nothing, 
+# cohort_defs)
 
-cohort_def = cohort_defs[idx][1]
+# cohort_def = cohort_defs[idx][1]
 
-cohort = GenerateCohorts(
-    conn;
-    visit_codes = cohort_def[1],
-    condition_codes = cohort_def[2] |> x -> convert(Vector{Int}, x),
-    gender_codes = cohort_def[3],
-    race_codes = cohort_def[4],
-    age_groupings = [cohort_def[5]],
-)
+# cohort = GenerateCohorts(
+    # conn;
+    # visit_codes = cohort_def[1],
+    # condition_codes = cohort_def[2] |> x -> convert(Vector{Int}, x),
+    # gender_codes = cohort_def[3],
+    # race_codes = cohort_def[4],
+    # age_groupings = [cohort_def[5]],
+# )
 
-df = GenerateStudyPopulations(cohort, conn; by_race = true, by_age_group = true)
+# df = GenerateStudyPopulations(cohort, conn; by_race = true, by_age_group = true)
 
-push!(study_pop, df)
+# push!(study_pop, df)
 
-end
+# end
