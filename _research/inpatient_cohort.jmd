@@ -27,7 +27,6 @@ using LibPQ
 using DataFrames
 using Statistics
 using MentalHealthEquity
-using Shapefile
 using Weave
 using FunSQL:
     SQLTable,
@@ -56,7 +55,7 @@ Using `FunSQL` we will query the table and details about a given schema.
 In this case, the schema follows the [OMOP CDM v5](https://ohdsi.github.io/CommonDataModel/index.html) schema:
 
 ```julia, results = "hidden"
-schema_info = introspect(conn; schema = :synpuf5)
+schema_info = introspect(conn; schema = :mimic_v531)
 ```
 
 > **NOTE** The variable `conn` contains connection details of the form 
@@ -218,7 +217,7 @@ To find patient counts per each bucket, the following scheme was used:
 q =
     From(person) |>
     Join(:op => observation_period, Get.person_id .== Get.op.person_id) |>
-    Where(Fun.in(Get.person_id, inpatients...)) |>
+    Where(Fun.in(Get.person_id, inpatients.person_id...)) |>
     Define(
         :age => Fun.date_part(
             "year",
@@ -376,6 +375,56 @@ ax.xlabel = "Genders"
 ax.xlabelsize = 20
 
 ax.ylabel = "Patient counts"
+ax.ylabelsize = 20
+
+display(f)
+```
+
+## Condition Breakdown
+
+To calculate the condition breakdowns of inpatients, the logic is as follows:
+
+1. Select the `condition_occurrence` table 
+2. Find all rows in `condition_occurrence` where `person_id` occurs in the `inpatients` variable
+3. Group table by the `condition_concept_id` column
+
+```julia, eval = true, echo = false, results = "hidden"
+q =
+    From(condition_occurrence) |>
+    Group(Get.condition_concept_id) |> 
+    Select(Get.condition_concept_id, Agg.count());
+
+sql = render(q, dialect = :postgresql);
+res = LibPQ.execute(conn, sql)
+df_conditions = DataFrame(res)
+```
+
+As there are `j size(df_conditions)[1]` distinct conditions recorded, here are the top 10 most common conditions and their counts:
+
+```julia, eval = true, echo = false, results = "hidden"
+sort!(df_conditions, :count, rev = true)
+```
+
+```julia, eval = true, echo = false
+f = Figure(resolution = (1200, 600))
+ax = Axis(f[1, 1])
+
+x_locs = 1:10
+counts = df_conditions[1:10, :]
+
+barplot!(
+    x_locs,
+    counts)
+ax.xticks = (x_locs, string.(df_conditions[1:10, :].condition_concept_id))
+ax.xticksize = 12
+
+ax.title = "Top 10 Conditions"
+ax.titlesize = 28
+
+ax.xlabel = "Conditions"
+ax.xlabelsize = 20
+
+ax.ylabel = "Counts"
 ax.ylabelsize = 20
 
 display(f)
@@ -701,6 +750,57 @@ ax.ylabelsize = 20
 display(f)
 ```
 
+## Condition Breakdown
+
+To calculate all the inpatients with conditions related to bipolar disorder, the logic is as follows:
+
+1. Select the `condition_occurrence` table 
+2. Find all rows in `condition_occurrence` where `person_id` occurs in the `inpatients_bipolar_disorder` variable
+3. Group table by the `condition_concept_id` column
+
+```julia, eval = true, echo = false, results = "hidden"
+q =
+    From(condition_occurrence) |>
+    Where(Fun.in(Get.person_id, inpatients_bipolar_disorder...)) |>
+    Group(Get.condition_concept_id) |> 
+    Select(Get.condition_concept_id, Agg.count());
+
+sql = render(q, dialect = :postgresql);
+res = LibPQ.execute(conn, sql)
+df_conditions = DataFrame(res)
+```
+
+As there are `j size(df_conditions)[1]` distinct conditions recorded, here are the top 10 most common conditions and their counts:
+
+```julia, eval = true, echo = false, results = "hidden"
+sort!(df_conditions, :count, rev = true)
+```
+
+```julia, eval = true, echo = false
+f = Figure(resolution = (1200, 600))
+ax = Axis(f[1, 1])
+
+x_locs = 1:10
+counts = df_conditions[1:10, :]
+
+barplot!(
+    x_locs,
+    counts)
+ax.xticks = (x_locs, string.(df_conditions[1:10, :].condition_concept_id))
+ax.xticksize = 12
+
+ax.title = "Top 10 Conditions"
+ax.titlesize = 28
+
+ax.xlabel = "Conditions"
+ax.xlabelsize = 20
+
+ax.ylabel = "Counts"
+ax.ylabelsize = 20
+
+display(f)
+```
+
 ## Care Site Breakdown [TODO]
 
 # Characterizing Inpatients with Depression
@@ -973,6 +1073,58 @@ ax.ylabelsize = 20
 display(f)
 ```
 
+## Condition Breakdown
+
+To calculate all the inpatients with conditions related to depression, the logic is as follows:
+
+1. Select the `condition_occurrence` table 
+2. Find all rows in `condition_occurrence` where `person_id` occurs in the `inpatients_depression` variable
+3. Group table by the `condition_concept_id` column
+
+```julia, eval = true, echo = false, results = "hidden"
+q =
+    From(condition_occurrence) |>
+    Where(Fun.in(Get.person_id, inpatients_depression...)) |>
+    Group(Get.condition_concept_id) |> 
+    Select(Get.condition_concept_id, Agg.count());
+
+sql = render(q, dialect = :postgresql);
+res = LibPQ.execute(conn, sql)
+df_conditions = DataFrame(res)
+```
+
+As there are `j size(df_conditions)[1]` distinct conditions recorded, here are the top 10 most common conditions and their counts:
+
+```julia, eval = true, echo = false, results = "hidden"
+sort!(df_conditions, :count, rev = true)
+```
+
+```julia, eval = true, echo = false
+f = Figure(resolution = (1200, 600))
+ax = Axis(f[1, 1])
+
+x_locs = 1:10
+counts = df_conditions[1:10, :]
+
+barplot!(
+    x_locs,
+    counts)
+ax.xticks = (x_locs, string.(df_conditions[1:10, :].condition_concept_id))
+ax.xticksize = 12
+
+ax.title = "Top 10 Conditions"
+ax.titlesize = 28
+
+ax.xlabel = "Conditions"
+ax.xlabelsize = 20
+
+ax.ylabel = "Counts"
+ax.ylabelsize = 20
+
+display(f)
+```
+
+
 ## Care Site Breakdown [TODO]
 
 # Characterizing Inpatients with Suicidality
@@ -1239,6 +1391,57 @@ ax.xlabel = "Genders"
 ax.xlabelsize = 20
 
 ax.ylabel = "Patient counts"
+ax.ylabelsize = 20
+
+display(f)
+```
+
+## Condition Breakdown
+
+To calculate all the inpatients with conditions related to suicidality, the logic is as follows:
+
+1. Select the `condition_occurrence` table 
+2. Find all rows in `condition_occurrence` where `person_id` occurs in the `inpatients_suicidality` variable
+3. Group table by the `condition_concept_id` column
+
+```julia, eval = true, echo = false, results = "hidden"
+q =
+    From(condition_occurrence) |>
+    Where(Fun.in(Get.person_id, inpatients_suicidality...)) |>
+    Group(Get.condition_concept_id) |> 
+    Select(Get.condition_concept_id, Agg.count());
+
+sql = render(q, dialect = :postgresql);
+res = LibPQ.execute(conn, sql)
+df_conditions = DataFrame(res)
+```
+
+As there are `j size(df_conditions)[1]` distinct conditions recorded, here are the top 10 most common conditions and their counts:
+
+```julia, eval = true, echo = false, results = "hidden"
+sort!(df_conditions, :count, rev = true)
+```
+
+```julia, eval = true, echo = false
+f = Figure(resolution = (1200, 600))
+ax = Axis(f[1, 1])
+
+x_locs = 1:10
+counts = df_conditions[1:10, :]
+
+barplot!(
+    x_locs,
+    counts)
+ax.xticks = (x_locs, string.(df_conditions[1:10, :].condition_concept_id))
+ax.xticksize = 12
+
+ax.title = "Top 10 Conditions"
+ax.titlesize = 28
+
+ax.xlabel = "Conditions"
+ax.xlabelsize = 20
+
+ax.ylabel = "Counts"
 ax.ylabelsize = 20
 
 display(f)
