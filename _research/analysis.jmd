@@ -1,0 +1,1241 @@
+```julia, echo = false, results = "hidden"
+using CairoMakie
+using CSV
+using DrWatson
+using DataFrames
+using Latexify
+using PrettyTables
+using Statistics
+```
+
+# Executive Summary
+
+**Author:** Jacob Scott Zelko
+
+**Date:** 2022-05-31
+
+**Summary:** Baseline characterization of individuals in bipolar disorder, depression, and suicidality cohorts across various strata.
+
+# Analysis Set-up
+
+The data used in this study was generated from the study, "Assessing Health Equity in Mental Healthcare Delivery Using a Federated Network Research Model", and the network package, [`JMentalHealthEquity`](https://github.com/TheCedarPrince/JMentalHealthEquity).
+
+## Loading Numerator Dataset
+
+We can now load the `numerators` dataset:
+
+```julia, echo = false, results = "hidden"
+numerators = CSV.read("../data/exp_pro/numerators.csv", DataFrame)
+numerators = numerators[!, [:condition, :race_concept_id, :gender_concept_id, :age_group, :count]]
+```
+
+```julia, echo = false, line_width = 120
+header = numerators |> names
+data = numerators[1:10, :]
+
+pretty_table(
+    data;
+    backend = Val(:html),
+    header = header,
+    tf = tf_html_minimalist
+)
+```
+
+For this analysis, the following fields are examined in the `numerators` dataset:
+
+- `condition` - the condition assigned to the patient population
+- `race_concept_id` - the race assigned to the patient population
+- `age_group` - the age group this patient population accounts for
+- `gender_concept_id` - the gender this patient population accounts for
+- `count` - the number of patients in this patient population
+
+The reason why this dataset is called `numerators` is because everyone represented in these various groups has a diagnosis of one of the three studied conditions of *Bipolar Disorder*, *Depression*, or *Suicidality*.
+
+## Loading Denominator Dataset
+
+We can now load the `denominators` dataset:
+
+```julia, echo = false, results = "hidden"
+denominators = CSV.read("../data/exp_pro/denominators.csv", DataFrame)
+denominators = denominators[!, [:race_concept_id, :gender_concept_id, :age_group, :count]]
+```
+
+```julia, echo = false
+header = denominators |> names
+data = denominators[1:10, :]
+
+pretty_table(
+    data;
+    backend = Val(:html),
+    header = header,
+    tf = tf_html_minimalist
+)
+```
+
+For this analysis, the following fields are examined in the `denominators` dataset:
+
+- `race_concept_id` - the race assigned to the patient population
+- `age_group` - the age group this patient population accounts for
+- `gender_concept_id` - the gender this patient population accounts for
+- `count` - the number of patients in this patient population
+
+The key difference with the `denominators` dataset is that it studies exclusively the entire number of patients matching a given strata regardless of condition.
+
+## Creating a Main Dataset
+
+Now that the `numerators` and `denominators` datasets have been loaded, they can be merged together as a `main` dataset that contains information on both `numerators` and `denominators` populations:
+
+```julia, echo = false, results = "hidden"
+main = innerjoin(
+    numerators,
+    denominators,
+    on = [
+        :race_concept_id => :race_concept_id,
+        :gender_concept_id => :gender_concept_id,
+        :age_group => :age_group,
+    ],
+    matchmissing = :notequal,
+    makeunique = true,
+)
+rename!(main, [:count_1 => :denominators, :count => :numerators])
+main.prevalence = (main.numerators ./ main.denominators) .* 100 .|> x -> round(x; digits = 2) 
+```
+
+```julia, echo = false
+header = main |> names
+data = main[1:10, :]
+
+pretty_table(
+    data;
+    backend = Val(:html),
+    header = header,
+    tf = tf_html_minimalist
+)
+```
+
+To clarify, here are what the two new columns mean in `main`:
+
+- `numerators` - the count of persons **with a given condition** matching the stratifications for that subpopulation
+- `denominators` - the total count of persons from the original database matching the stratifications for that subpopulation **but not the condition** 
+- `prevalence` - the crude prevalence calculated from the numerators and denominators recorded as a percentage
+
+## Quality Check
+
+To ensure the quality of the data being analyzed, a few additional pre-processing steps need to be run.
+
+### Check for Missing Expected Rows
+
+This checks to see if the data being analyzed matches what ideally should be expected in a dataset across various strata.
+
+```julia, echo = false, results = "hidden"
+strata =
+    names(main) |> x -> filter(z -> !in(z, ["numerators", "denominators", "prevalence"]), x)
+row_features = []
+for s in strata
+	push!(row_features, main[!, s] |> unique)
+end
+expected_rows =
+    Iterators.product(
+    	row_features...
+    ) .|> collect
+```
+
+Given the following strata being examined:
+
+<!--TODO: Fix this later to make it work for lists-->
+`j display("text/latex", latexify(strata))`
+
+There are `j length(expected_rows)` expected row combinations with associated `numerators`, `denominators`, and `prevalence` counts for the number of strata or features being examined.
+In actuality, there are `j length(main.prevalence)` rows.
+Due to suppression purposes, that is why there are rows missing but going forward for analysis purposes, we need to add these missing row combinations into the `main` dataframe to prevent downstream logic errors as the assumption for this analysis is that all possible combinations are represented.
+The missing rows will have `numerators`, `denominators`, and `prevalence` counts set to "missing" if they were just added to `main`.
+
+```julia, echo = false, results = "hidden"
+let
+    actual_rows = []
+    counter = 1
+    for row in eachrow(main)
+        row_fields = row[Symbol.(strata)] |> collect
+        if in(row_fields, expected_rows)
+		push!(actual_rows, row_fields)
+        end
+    end
+    missed_rows = setdiff(expected_rows, actual_rows)
+    for row in missed_rows
+	push!(main, Dict(zip([strata..., "numerators", "denominators", "prevalence"], [row..., missing, missing, missing])), cols = :union)
+    end
+end
+```
+
+# Analysis
+
+## Background
+
+For convenience with the following analysis, `main`, is split into the three subpopulations of interest being `bipolar_subpop`, `depression_subpop`, and `suicidality_subpop`.
+These three subpopulations only contain data based on one of the three given conditions.
+Furthermore, for this analysis only the state of Georgia is examined due to proof of concept limitations.
+Finally, across the three conditions, subpopulations are only examined by race, gender, age group, and whether or not they have the condition of interest.
+
+<!--TODO: ADD PREVALENCE DEFINITION HERE-->
+In terms of the actual calculations taking place in this analysis, the main metric being calculated is crude prevalence.
+This is calculated as follows:
+
+$$\text{Crude Prevalence} = \frac{Numerator}{Denominator}$$
+
+In this analysis, the $Numerator$ and $Denominator$ are exactly the same as the `numerators` and `denominators` populations found in `main`.
+
+```julia, echo = false, results = "hidden"
+bipolar_subpop = filter(row -> row.condition == "Bipolar Disorder", main)
+depression_subpop = filter(row -> row.condition == "Depression", main)
+suicidality_subpop = filter(row -> row.condition == "Suicidality", main)
+sort!(bipolar_subpop, [:gender_concept_id, :age_group])
+sort!(depression_subpop, [:gender_concept_id, :age_group])
+sort!(suicidality_subpop, [:gender_concept_id, :age_group])
+```
+
+```julia, echo = false, results = "hidden"
+# Convenience counter for labeling figures
+figure_counter = 0
+
+# Convenience counter for labeling tables
+table_counter = 0
+
+# Convenience alphabet array for labeling subfigures
+subfig_labels = [
+    "A",
+    "B",
+    "C",
+    "D",
+    "E",
+    "F",
+    "G",
+    "H",
+    "I",
+    "J",
+    "K",
+    "L",
+    "M",
+    "N",
+    "O",
+    "P",
+    "Q",
+    "R",
+    "S",
+    "T",
+    "U",
+    "V",
+    "W",
+    "X",
+    "Y",
+    "Z",
+]
+```
+
+## Examining Depression Subpopulations
+
+### Isolated Crude Prevalence Analysis of One Subpopulation
+
+In this isolated example, the crude prevalence of depression in white Georgians is examined.
+
+```julia, echo = false, results = "hidden"
+subpop = filter(row -> row.race_concept_id == "White", depression_subpop)
+
+females = filter(row -> row.gender_concept_id == "Female", subpop)
+males = filter(row -> row.gender_concept_id == "Male", subpop)
+
+female_prev = females.numerators ./ females.denominators * 100
+male_prev = males.numerators ./ males.denominators * 100
+```
+
+```julia, echo = false
+f = Figure()
+figure_counter += 1
+
+plot_axis = Axis(
+    f[1, 1],
+    xtickformat = xs -> ["$(abs(x))%" for x in xs],
+    yticks = (1:length(unique(subpop.age_group)), unique(subpop.age_group)),
+    xlabel = "Crude Prevalence (%)",
+    ylabel = "Age Group",
+)
+
+barplot!(
+    female_prev,
+    bar_labels = :y,
+    label_size = 20,
+    flip_labels_at = (0, 10),
+    label_formatter = x -> round(x; digits = 2) |> abs |> x -> "$(x)%",
+    label_offset = 10,
+    color = :tomato,
+    strokecolor = :black,
+    strokewidth = 1,
+    direction = :x,
+)
+barplot!(
+    male_prev .* -1,
+    bar_labels = :y,
+    label_size = 20,
+    flip_labels_at = (-5, -0),
+    label_formatter = x -> round(x; digits = 2) |> abs |> x -> "$(x)%",
+    label_offset = 10,
+    color = :dodgerblue,
+    strokecolor = :black,
+    strokewidth = 1,
+    direction = :x,
+)
+
+legend_labels = ["Female", "Male"]
+legend_elements = [PolyElement(polycolor = :tomato), PolyElement(polycolor = :dodgerblue)]
+legend_title = "Colors"
+
+Legend(f[1, 2], legend_elements, legend_labels, legend_title)
+
+table_axis = Axis(f[2, :])
+pt = pretty_table(
+    String,
+    hcat(
+        males[!, [:age_group, :numerators, :denominators]],
+        females[!, [:numerators, :denominators]],
+        makeunique = true,
+    );
+    header = ["Age Group", "Male Num.", "Male Denom.", "Female Num.", "Female Denom."],
+);
+text!(table_axis, pt; font = "JuliaMono", textsize = 15);
+xlims!(table_axis, 0, 2);
+ylims!(table_axis, 0, 2);
+hidespines!(table_axis);
+hidedecorations!(table_axis);
+
+Label(
+    f[:, :, Top()],
+    "Fig. $(figure_counter): Crude Prevalence of Depression in White Georgia Subpopulations",
+    valign = :bottom,
+    font = "TeX Gyre Heros Bold",
+    padding = (0, 0, 20, 0),
+    textsize = 20,
+)
+
+Label(
+    f[1, :, TopLeft()],
+    "(A)",
+    textsize = 16,
+    font = "TeX Gyre Heros Bold",
+    padding = (0, 20, -10, 0),
+    halign = :right,
+)
+
+Label(
+    f[2, :, TopLeft()],
+    "(B)",
+    textsize = 16,
+    font = "TeX Gyre Heros Bold",
+    padding = (0, 20, -10, 0),
+    halign = :right,
+)
+
+f
+```
+
+> Fig `j figure_counter`. **Crude Prevalence of Depression in White Georgia Subpopulations.**
+> (A) A bidirectional horizontal bar plot depicting prevalence crude prevalence rates (no adjustment was used).
+> On the x-axis is crude prevalence reported as a percentage that was calculated from dividing the subpopulation who have the associated condition (i.e. the numerators) over the subpopulation of those that do not have the associated condition (i.e. the denominators).
+> The y-axis denotes the age groups that were studied and the colors found in the legend map to the genders represented on either side of the horizontal bars.
+> On the bars themselves are the calculated crude prevalence percentage for that particular subpopulation.
+> (B) This table is the data used in the calculations for (A).
+> "Num". stands for "Numerator" and "Denom." stands for "Denominator" and are the respective numerators and denominators values for the crude prevalence metrics determined in (A).
+
+Fig. `j figure_counter` shows an example of how crude prevalence for specific subpopulations was calculated across race, gender, age group, and condition.
+It serves as a generic template for how other figures using crude prevalence are generated in this analysis.
+
+### Crude Prevalence Analysis across Georgia Subpopulations
+
+Taking the prior example, the analysis can now be conducted across all subpopulations.
+
+```julia, echo = false, results = "hidden", eval = true
+depression_race_subpops = groupby(depression_subpop, :race_concept_id)
+```
+
+```julia, echo = false, eval = true
+figure_counter += 1
+
+let
+
+    fig_rows = length(depression_race_subpops) / 2 |> x -> round(Int, x)
+    fig_cols = 2
+
+    max_prev = maximum(filter(x -> !ismissing(x), depression_subpop.prevalence))
+
+    f = Figure()
+
+    pop_idx = 1
+    for r = 1:fig_rows
+        for c = 1:fig_cols
+            pop = depression_race_subpops[pop_idx]
+
+            females = filter(row -> row.gender_concept_id == "Female", pop)
+            males = filter(row -> row.gender_concept_id == "Male", pop)
+
+            plot_axis = Axis(
+                f[r, c],
+                xtickformat = xs -> ["$(abs(x))%" for x in xs],
+                yticks = (1:length(unique(pop.age_group)), unique(pop.age_group)),
+                title = "$(pop.race_concept_id |> first)",
+                limits = ((-max_prev, max_prev), (0, length(main.age_group |> unique) + 1)),
+            )
+
+            barplot!(
+                females.prevalence,
+                color = :tomato,
+                strokecolor = :black,
+                strokewidth = 1,
+                direction = :x,
+            )
+            barplot!(
+                males.prevalence .* -1,
+                color = :dodgerblue,
+                strokecolor = :black,
+                strokewidth = 1,
+                direction = :x,
+            )
+
+            if r == 1
+                Label(
+                    f[r, c, TopLeft()],
+                    "$(subfig_labels[pop_idx])",
+                    textsize = 16,
+                    font = "TeX Gyre Heros Bold",
+                    padding = (0, 20, -20, 0),
+                    halign = :right,
+                )
+            else
+                Label(
+                    f[r, c, TopLeft()],
+                    "$(subfig_labels[pop_idx])",
+                    textsize = 16,
+                    font = "TeX Gyre Heros Bold",
+                    padding = (0, 20, 10, 0),
+                    halign = :right,
+                )
+            end
+
+            if c != 1
+                hideydecorations!(
+                    plot_axis;
+                    label = true,
+                    ticklabels = false,
+                    ticks = false,
+                    grid = false,
+                    minorgrid = false,
+                    minorticks = false,
+                )
+            end
+
+            pop_idx = pop_idx + 1
+        end
+    end
+
+    legend_labels = ["Female", "Male"]
+    legend_elements =
+        [PolyElement(polycolor = :tomato), PolyElement(polycolor = :dodgerblue)]
+    legend_title = "Colors"
+    Legend(f[:, 3], legend_elements, legend_labels, legend_title)
+
+    Label(
+        f[:, :, Top()],
+        "Fig. $(figure_counter): Crude Prevalence of Depression in Georgia Subpopulations",
+        valign = :center,
+        font = "TeX Gyre Heros Bold",
+        padding = (0, 0, 30, 0),
+        textsize = 20,
+    )
+
+    Label(
+        f[:, 1:2, Left()],
+        "Age Group",
+        valign = :center,
+        padding = (0, 70, 0, 0),
+        rotation = π / 2,
+        textsize = 16,
+    )
+
+    Label(
+        f[:, :, Bottom()],
+        "Crude Prevalence (%)",
+        valign = :center,
+        padding = (-100, 0, 0, 30),
+        textsize = 16,
+    )
+    f
+end
+```
+
+> Figure `j figure_counter`. **Crude Prevalence of Depression in Georgia Subpopulations.**
+> Subfigures (A) - (D) are bidirectional horizontal bar plots depicting crude prevalence rates (no adjustment was used).
+> On the x-axis is crude prevalence reported as a percentage that was calculated from dividing the subpopulation who have the associated condition (i.e. the numerators) over the subpopulation of those that do not have the associated condition (i.e. the denominators).
+> The y-axis denotes the age groups that were studied and the colors found in the legend map to the genders represented on either side of the horizontal bars.
+> Whereever data is missing, this comes from either suppression done to protect the privacy of those subpopulations or there is no data for the specific subpopulation that was being investigated.
+
+For clarity, Figure `j figure_counter` does not include prevalence counts on the bars of the bar plots themselves.
+This information is found in the following table:
+
+```julia, echo = false, eval = true
+table_counter += 1
+
+let
+
+    fig_rows = length(depression_race_subpops) / 2 |> x -> round(Int, x)
+    fig_cols = 2
+
+    f = Figure()
+
+    pop_idx = 1
+    for r = 1:fig_rows
+        for c = 1:fig_cols
+            pop = depression_race_subpops[pop_idx]
+
+            females = filter(row -> row.gender_concept_id == "Female", pop)
+            males = filter(row -> row.gender_concept_id == "Male", pop)
+
+            plot_axis = Axis(f[r, c])
+
+	    temp_table = 
+                sort(outerjoin(
+                    males[!, [:age_group, :prevalence]],
+                    females[!, [:age_group, :prevalence]],
+                    on = [:age_group => :age_group],
+                    makeunique = true,
+                ), :age_group);
+	    
+            pt = pretty_table(
+                String,
+		temp_table,
+                header = ["Age Group", "Male Prev.", "Female Prev."],
+            )
+            text!(plot_axis, pt; font = "JuliaMono", textsize = 14)
+            xlims!(plot_axis, 0, 2)
+            ylims!(plot_axis, 0, 2)
+            hidespines!(plot_axis)
+            hidedecorations!(plot_axis)
+
+            Label(
+                f[r, c, Top()],
+                "$(pop.race_concept_id |> first)",
+                textsize = 16,
+                font = "TeX Gyre Heros Bold",
+                padding = (0, 0, -40, 0),
+                halign = :center,
+            )
+
+            Label(
+                f[r, c, TopLeft()],
+                "$(subfig_labels[pop_idx])",
+                textsize = 16,
+                font = "TeX Gyre Heros Bold",
+                padding = (0, 20, -40, 0),
+                halign = :right,
+            )
+
+            pop_idx = pop_idx + 1
+        end
+    end
+
+    Label(
+        f[:, :, Top()],
+        "Tab. $(table_counter): Crude Prevalence of Depression in Georgia Subpopulations",
+        valign = :center,
+        font = "TeX Gyre Heros Bold",
+        padding = (0, 0, 30, 0),
+        textsize = 20,
+    )
+
+    f
+end
+```
+
+> Table `j table_counter`. **Crude Prevalence of Depression in Georgia Subpopulations.**
+> These metrics are the computed values of prevalence for each subpopulation.
+> Any values that had to be suppressed due to patient privacy purposes was denoted as `missing` in these tables.
+
+### Discussion
+
+Breaking down the values in Table `j table_counter`, the following statistics can be generated:
+
+```julia, echo = false
+gdf = groupby(depression_subpop, :age_group)
+cdf = combine(gdf, :prevalence .=> mean∘skipmissing .=> :mean_prevalence)
+cdf.mean_prevalence = cdf.mean_prevalence |> x -> round.(x; digits = 1)
+
+sort!(cdf, :mean_prevalence, rev = true)
+header = cdf |> names
+data = cdf
+
+pretty_table(
+    data;
+    backend = Val(:html),
+    header = header,
+    tf = tf_html_minimalist
+)
+```
+
+Across all groups, the mean crude prevalence rate is `j main.prevalence |> mean∘skipmissing`
+By age group, the age group with the highest mean crude prevalence of depression was found to be `j cdf[1, :age_group]` with a value of `j "$(cdf[1, :mean_prevalence])%"`.
+Opposite to that, 
+
+
+
+
+## Examining Bipolar Disorder Subpopulations
+
+```julia, echo = false, results = "hidden"
+subpop = filter(row -> row.race_concept_id == "White", bipolar_subpop)
+
+females = filter(row -> row.gender_concept_id == "Female", subpop)
+males = filter(row -> row.gender_concept_id == "Male", subpop)
+
+female_prev = females.numerators ./ females.denominators * 100
+male_prev = males.numerators ./ males.denominators * 100
+```
+
+```julia, echo = false
+f = Figure()
+figure_counter += 1
+
+plot_axis = Axis(
+    f[1, 1],
+    xtickformat = xs -> ["$(abs(x))%" for x in xs],
+    yticks = (1:length(unique(subpop.age_group)), unique(subpop.age_group)),
+    xlabel = "Crude Prevalence (%)",
+    ylabel = "Age Group",
+)
+
+barplot!(
+    female_prev,
+    bar_labels = :y,
+    label_size = 20,
+    flip_labels_at = (0, mean(filter(x -> !ismissing(x), female_prev))),
+    label_formatter = x -> round(x; digits = 2) |> abs |> x -> "$(x)%",
+    label_offset = 10,
+    color = :tomato,
+    strokecolor = :black,
+    strokewidth = 1,
+    direction = :x,
+)
+barplot!(
+    male_prev .* -1,
+    bar_labels = :y,
+    label_size = 20,
+    flip_labels_at = (-mean(filter(x -> !ismissing(x), male_prev)), 0),
+    label_formatter = x -> round(x; digits = 2) |> abs |> x -> "$(x)%",
+    label_offset = 10,
+    color = :dodgerblue,
+    strokecolor = :black,
+    strokewidth = 1,
+    direction = :x,
+)
+
+legend_labels = ["Female", "Male"]
+legend_elements = [PolyElement(polycolor = :tomato), PolyElement(polycolor = :dodgerblue)]
+legend_title = "Colors"
+
+Legend(f[1, 2], legend_elements, legend_labels, legend_title)
+
+table_axis = Axis(f[2, :])
+pt = pretty_table(
+    String,
+    hcat(
+        males[!, [:age_group, :numerators, :denominators]],
+        females[!, [:numerators, :denominators]],
+        makeunique = true,
+    );
+    header = ["Age Group", "Male Num.", "Male Denom.", "Female Num.", "Female Denom."],
+);
+text!(table_axis, pt; font = "JuliaMono", textsize = 15);
+xlims!(table_axis, 0, 2);
+ylims!(table_axis, 0, 2);
+hidespines!(table_axis);
+hidedecorations!(table_axis);
+
+Label(
+    f[:, :, Top()],
+    "Fig. $(figure_counter): Crude Prevalence of Bipolar Disorder in White Georgia Subpopulations",
+    valign = :bottom,
+    font = "TeX Gyre Heros Bold",
+    padding = (0, 0, 20, 0),
+    textsize = 20,
+)
+
+Label(
+    f[1, :, TopLeft()],
+    "(A)",
+    textsize = 16,
+    font = "TeX Gyre Heros Bold",
+    padding = (0, 20, -10, 0),
+    halign = :right,
+)
+
+Label(
+    f[2, :, TopLeft()],
+    "(B)",
+    textsize = 16,
+    font = "TeX Gyre Heros Bold",
+    padding = (0, 20, -10, 0),
+    halign = :right,
+)
+
+f
+```
+
+> Fig `j figure_counter`. **Crude Prevalence of Bipolar Disorder in White Georgia Subpopulations.**
+> (A) A bidirectional horizontal bar plot depicting prevalence crude prevalence rates (no adjustment was used).
+> On the x-axis is crude prevalence reported as a percentage that was calculated from dividing the subpopulation who have the associated condition (i.e. the numerators) over the subpopulation of those that do not have the associated condition (i.e. the denominators).
+> The y-axis denotes the age groups that were studied and the colors found in the legend map to the genders represented on either side of the horizontal bars.
+> On the bars themselves are the calculated crude prevalence percentage for that particular subpopulation.
+> (B) This table is the data used in the calculations for (A).
+> "Num". stands for "Numerator" and "Denom." stands for "Denominator" and are the respective numerators and denominators values for the crude prevalence metrics determined in (A).
+
+Fig. `j figure_counter` shows an example of how crude prevalence for specific subpopulations was calculated across race, gender, age group, and condition.
+It serves as a generic template for how other figures using crude prevalence are generated.
+
+```julia, echo = false, results = "hidden", eval = true
+bipolar_race_subpops = groupby(bipolar_subpop, :race_concept_id)
+```
+
+```julia, echo = false, eval = true
+figure_counter += 1
+
+let
+
+    fig_rows = length(bipolar_race_subpops) / 2 |> x -> round(Int, x)
+    fig_cols = 2
+
+    max_prev = maximum(filter(x -> !ismissing(x), bipolar_subpop.prevalence))
+
+    f = Figure()
+
+    pop_idx = 1
+    for r = 1:fig_rows
+        for c = 1:fig_cols
+            pop = bipolar_race_subpops[pop_idx]
+
+            females = filter(row -> row.gender_concept_id == "Female", pop)
+            males = filter(row -> row.gender_concept_id == "Male", pop)
+
+            plot_axis = Axis(
+                f[r, c],
+                xtickformat = xs -> ["$(abs(x))%" for x in xs],
+                yticks = (1:length(unique(pop.age_group)), unique(pop.age_group)),
+                title = "$(pop.race_concept_id |> first)",
+                limits = ((-max_prev, max_prev), (0, length(main.age_group |> unique))),
+            )
+
+            barplot!(
+                females.prevalence,
+                color = :tomato,
+                strokecolor = :black,
+                strokewidth = 1,
+                direction = :x,
+            )
+            barplot!(
+                males.prevalence .* -1,
+                color = :dodgerblue,
+                strokecolor = :black,
+                strokewidth = 1,
+                direction = :x,
+            )
+
+            if r == 1
+                Label(
+                    f[r, c, TopLeft()],
+                    "$(subfig_labels[pop_idx])",
+                    textsize = 16,
+                    font = "TeX Gyre Heros Bold",
+                    padding = (0, 20, -20, 0),
+                    halign = :right,
+                )
+            else
+                Label(
+                    f[r, c, TopLeft()],
+                    "$(subfig_labels[pop_idx])",
+                    textsize = 16,
+                    font = "TeX Gyre Heros Bold",
+                    padding = (0, 20, 10, 0),
+                    halign = :right,
+                )
+            end
+
+            if c != 1
+                hideydecorations!(
+                    plot_axis;
+                    label = true,
+                    ticklabels = false,
+                    ticks = false,
+                    grid = false,
+                    minorgrid = false,
+                    minorticks = false,
+                )
+            end
+
+            pop_idx = pop_idx + 1
+        end
+    end
+
+    legend_labels = ["Female", "Male"]
+    legend_elements =
+        [PolyElement(polycolor = :tomato), PolyElement(polycolor = :dodgerblue)]
+    legend_title = "Colors"
+    Legend(f[:, 3], legend_elements, legend_labels, legend_title)
+
+    Label(
+        f[:, :, Top()],
+        "Fig. $(figure_counter): Crude Prevalence of Bipolar Disorder in Georgia Subpopulations",
+        valign = :center,
+        font = "TeX Gyre Heros Bold",
+        padding = (0, 0, 30, 0),
+        textsize = 20,
+    )
+
+    Label(
+        f[:, 1:2, Left()],
+        "Age Group",
+        valign = :center,
+        padding = (0, 70, 0, 0),
+        rotation = π / 2,
+        textsize = 16,
+    )
+
+    Label(
+        f[:, :, Bottom()],
+        "Crude Prevalence (%)",
+        valign = :center,
+        padding = (-100, 0, 0, 30),
+        textsize = 16,
+    )
+    f
+end
+```
+
+> Figure `j figure_counter`. **Crude Prevalence of Bipolar Disorder in Georgia Subpopulations.**
+> Subfigures (A) - (D) are bidirectional horizontal bar plots depicting prevalence crude prevalence rates (no adjustment was used).
+> On the x-axis is crude prevalence reported as a percentage that was calculated from dividing the subpopulation who have the associated condition (i.e. the numerators) over the subpopulation of those that do not have the associated condition (i.e. the denominators).
+> The y-axis denotes the age groups that were studied and the colors found in the legend map to the genders represented on either side of the horizontal bars.
+> It should be noted that in (D), for the 70 - 79 and 80 - 89 male age groupings, there is no data reported.
+> This comes from suppression done to protect the privacy of those subpopulations.
+
+In Fig. `j figure_counter`, the crude prevalence of bipolar disorder was calculated across racial demographics.
+
+```julia, echo = false, eval = true
+table_counter += 1
+
+let
+
+    fig_rows = length(bipolar_race_subpops) / 2 |> x -> round(Int, x)
+    fig_cols = 2
+
+    f = Figure()
+
+    pop_idx = 1
+    for r = 1:fig_rows
+        for c = 1:fig_cols
+            pop = bipolar_race_subpops[pop_idx]
+
+            females = filter(row -> row.gender_concept_id == "Female", pop)
+            males = filter(row -> row.gender_concept_id == "Male", pop)
+
+            plot_axis = Axis(f[r, c])
+
+	    temp_table = 
+                sort(outerjoin(
+                    males[!, [:age_group, :prevalence]],
+                    females[!, [:age_group, :prevalence]],
+                    on = [:age_group => :age_group],
+                    makeunique = true,
+                ), :age_group);
+	    
+            pt = pretty_table(
+                String,
+		temp_table,
+                header = ["Age Group", "Male Prev.", "Female Prev."],
+            )
+            text!(plot_axis, pt; font = "JuliaMono", textsize = 14)
+            xlims!(plot_axis, 0, 2)
+            ylims!(plot_axis, 0, 2)
+            hidespines!(plot_axis)
+            hidedecorations!(plot_axis)
+
+            Label(
+                f[r, c, Top()],
+                "$(pop.race_concept_id |> first)",
+                textsize = 16,
+                font = "TeX Gyre Heros Bold",
+                padding = (0, 0, -40, 0),
+                halign = :center,
+            )
+
+            Label(
+                f[r, c, TopLeft()],
+                "$(subfig_labels[pop_idx])",
+                textsize = 16,
+                font = "TeX Gyre Heros Bold",
+                padding = (0, 20, -40, 0),
+                halign = :right,
+            )
+
+            pop_idx = pop_idx + 1
+        end
+    end
+
+    Label(
+        f[:, :, Top()],
+        "Tab. $(table_counter): Crude Prevalence of Bipolar Disorder in Georgia Subpopulations",
+        valign = :center,
+        font = "TeX Gyre Heros Bold",
+        padding = (0, 0, 30, 0),
+        textsize = 20,
+    )
+
+    f
+end
+```
+
+> Table `j table_counter`. **Crude Prevalence of Bipolar Disorder in Georgia Subpopulations.**
+> These metrics are the computed values of prevalence for each subpopulation.
+> Any values that had to be suppressed due to patient privacy purposes was denoted as `missing` in these tables.
+
+## Examining Suicidality Subpopulations
+
+```julia, echo = false, results = "hidden"
+subpop = filter(row -> row.race_concept_id == "White", suicidality_subpop)
+
+females = filter(row -> row.gender_concept_id == "Female", subpop)
+males = filter(row -> row.gender_concept_id == "Male", subpop)
+
+female_prev = females.numerators ./ females.denominators * 100
+male_prev = males.numerators ./ males.denominators * 100
+```
+
+```julia, echo = false
+figure_counter += 1
+
+f = Figure()
+    
+max_prev = maximum(filter(x -> !ismissing(x), suicidality_subpop.prevalence))
+
+plot_axis = Axis(
+    f[1, 1],
+    xtickformat = xs -> ["$(abs(x))%" for x in xs],
+    yticks = (1:length(unique(main.age_group)), unique(main.age_group)),
+    xlabel = "Crude Prevalence (%)",
+    ylabel = "Age Group",
+    limits = ((-max_prev, max_prev), (0, length(main.age_group |> unique) + 1)),
+)
+
+barplot!(
+    filter(x -> !ismissing(x), female_prev),
+    bar_labels = :y,
+    label_size = 20,
+    flip_labels_at = (0, mean(filter(x -> !ismissing(x), female_prev))),
+    label_formatter = x -> round(x; digits = 2) |> abs |> x -> "$(x)%",
+    label_offset = 10,
+    color = :tomato,
+    strokecolor = :black,
+    strokewidth = 1,
+    direction = :x
+)
+barplot!(
+    filter(x -> !ismissing(x), male_prev) .* -1,
+    bar_labels = :y,
+    label_size = 20,
+    flip_labels_at = (-mean(filter(x -> !ismissing(x), male_prev)), 0),
+    label_formatter = x -> round(x; digits = 2) |> abs |> x -> "$(x)%",
+    label_offset = 10,
+    color = :dodgerblue,
+    strokecolor = :black,
+    strokewidth = 1,
+    direction = :x
+)
+
+legend_labels = ["Female", "Male"]
+legend_elements = [PolyElement(polycolor = :tomato), PolyElement(polycolor = :dodgerblue)]
+legend_title = "Colors"
+
+Legend(f[1, 2], legend_elements, legend_labels, legend_title)
+
+table_axis = Axis(f[2, :])
+pt = pretty_table(
+    String,
+    hcat(
+        males[!, [:age_group, :numerators, :denominators]],
+        females[!, [:numerators, :denominators]],
+        makeunique = true,
+    );
+    header = ["Age Group", "Male Num.", "Male Denom.", "Female Num.", "Female Denom."],
+);
+text!(table_axis, pt; font = "JuliaMono", textsize = 15);
+xlims!(table_axis, 0, 2);
+ylims!(table_axis, 0, 2);
+hidespines!(table_axis);
+hidedecorations!(table_axis);
+
+Label(
+    f[:, :, Top()],
+    "Fig. $(figure_counter): Crude Prevalence of Suicidality in White Georgia Subpopulations",
+    valign = :bottom,
+    font = "TeX Gyre Heros Bold",
+    padding = (0, 0, 20, 0),
+    textsize = 20,
+)
+
+Label(
+    f[1, :, TopLeft()],
+    "(A)",
+    textsize = 16,
+    font = "TeX Gyre Heros Bold",
+    padding = (0, 20, -10, 0),
+    halign = :right,
+)
+
+Label(
+    f[2, :, TopLeft()],
+    "(B)",
+    textsize = 16,
+    font = "TeX Gyre Heros Bold",
+    padding = (0, 20, -10, 0),
+    halign = :right,
+)
+
+f
+```
+
+> Fig `j figure_counter`. **Crude Prevalence of Suicidality in White Georgia Subpopulations.**
+> (A) A bidirectional horizontal bar plot depicting prevalence crude prevalence rates (no adjustment was used).
+> On the x-axis is crude prevalence reported as a percentage that was calculated from dividing the subpopulation who have the associated condition (i.e. the numerators) over the subpopulation of those that do not have the associated condition (i.e. the denominators).
+> The y-axis denotes the age groups that were studied and the colors found in the legend map to the genders represented on either side of the horizontal bars.
+> On the bars themselves are the calculated crude prevalence percentage for that particular subpopulation.
+> (B) This table is the data used in the calculations for (A).
+> "Num". stands for "Numerator" and "Denom." stands for "Denominator" and are the respective numerators and denominators values for the crude prevalence metrics determined in (A).
+
+Fig. `j figure_counter` shows an example of how crude prevalence for specific subpopulations was calculated across race, gender, age group, and condition.
+It serves as a generic template for how other figures using crude prevalence are generated.
+
+```julia, echo = false, results = "hidden", eval = true
+suicidality_race_subpops = groupby(suicidality_subpop, :race_concept_id)
+```
+
+```julia, echo = false, eval = true
+figure_counter += 1
+
+let
+
+    fig_rows = length(suicidality_race_subpops) / 2 |> x -> round(Int, x)
+    fig_cols = 2
+
+    max_prev = maximum(filter(x -> !ismissing(x), suicidality_subpop.prevalence))
+
+    f = Figure()
+
+    pop_idx = 1
+    for r = 1:fig_rows
+        for c = 1:fig_cols
+            pop = suicidality_race_subpops[pop_idx]
+
+            females = filter(row -> row.gender_concept_id == "Female", pop)
+            males = filter(row -> row.gender_concept_id == "Male", pop)
+
+            plot_axis = Axis(
+                f[r, c],
+                xtickformat = xs -> ["$(abs(x))%" for x in xs],
+                yticks = (1:length(unique(pop.age_group)), unique(pop.age_group)),
+                title = "$(pop.race_concept_id |> first)",
+                limits = ((-max_prev, max_prev), (0, length(main.age_group |> unique))),
+            )
+
+            barplot!(
+    		filter(x -> !ismissing(x), females.prevalence) |> x -> isempty(x) ? [0] : x,
+                color = :tomato,
+                strokecolor = :black,
+                strokewidth = 1,
+                direction = :x,
+            )
+            barplot!(
+    		filter(x -> !ismissing(x), males.prevalence .* -1) |> x -> isempty(x) ? [0] : x,
+                color = :dodgerblue,
+                strokecolor = :black,
+                strokewidth = 1,
+                direction = :x,
+            )
+
+            if r == 1
+                Label(
+                    f[r, c, TopLeft()],
+                    "$(subfig_labels[pop_idx])",
+                    textsize = 16,
+                    font = "TeX Gyre Heros Bold",
+                    padding = (0, 20, -20, 0),
+                    halign = :right,
+                )
+            else
+                Label(
+                    f[r, c, TopLeft()],
+                    "$(subfig_labels[pop_idx])",
+                    textsize = 16,
+                    font = "TeX Gyre Heros Bold",
+                    padding = (0, 20, 10, 0),
+                    halign = :right,
+                )
+            end
+
+            if c != 1
+                hideydecorations!(
+                    plot_axis;
+                    label = true,
+                    ticklabels = false,
+                    ticks = false,
+                    grid = false,
+                    minorgrid = false,
+                    minorticks = false,
+                )
+            end
+
+            pop_idx = pop_idx + 1
+        end
+    end
+
+    legend_labels = ["Female", "Male"]
+    legend_elements =
+        [PolyElement(polycolor = :tomato), PolyElement(polycolor = :dodgerblue)]
+    legend_title = "Colors"
+    Legend(f[:, 3], legend_elements, legend_labels, legend_title)
+
+    Label(
+        f[:, :, Top()],
+        "Fig. $(figure_counter): Crude Prevalence of Suicidality in Georgia Subpopulations",
+        valign = :center,
+        font = "TeX Gyre Heros Bold",
+        padding = (0, 0, 30, 0),
+        textsize = 20,
+    )
+
+    Label(
+        f[:, 1:2, Left()],
+        "Age Group",
+        valign = :center,
+        padding = (0, 70, 0, 0),
+        rotation = π / 2,
+        textsize = 16,
+    )
+
+    Label(
+        f[:, :, Bottom()],
+        "Crude Prevalence (%)",
+        valign = :center,
+        padding = (-100, 0, 0, 30),
+        textsize = 16,
+    )
+    f
+end
+```
+
+> Figure `j figure_counter`. **Crude Prevalence of Suicidality in Georgia Subpopulations.**
+> Subfigures (A) - (D) are bidirectional horizontal bar plots depicting prevalence crude prevalence rates (no adjustment was used).
+> On the x-axis is crude prevalence reported as a percentage that was calculated from dividing the subpopulation who have the associated condition (i.e. the numerators) over the subpopulation of those that do not have the associated condition (i.e. the denominators).
+> The y-axis denotes the age groups that were studied and the colors found in the legend map to the genders represented on either side of the horizontal bars.
+> It should be noted that in (D), for the 70 - 79 and 80 - 89 male age groupings, there is no data reported.
+> This comes from suppression done to protect the privacy of those subpopulations.
+
+In Fig. `j figure_counter`, the crude prevalence of suicidality disorder was calculated across racial demographics.
+
+```julia, echo = false, eval = true
+table_counter += 1
+
+let
+
+    fig_rows = length(suicidality_race_subpops) / 2 |> x -> round(Int, x)
+    fig_cols = 2
+
+    f = Figure()
+
+    pop_idx = 1
+    for r = 1:fig_rows
+        for c = 1:fig_cols
+            pop = suicidality_race_subpops[pop_idx]
+
+            females = filter(row -> row.gender_concept_id == "Female", pop)
+            males = filter(row -> row.gender_concept_id == "Male", pop)
+
+            plot_axis = Axis(f[r, c])
+
+	    temp_table = 
+                sort(outerjoin(
+                    males[!, [:age_group, :prevalence]],
+                    females[!, [:age_group, :prevalence]],
+                    on = [:age_group => :age_group],
+                    makeunique = true,
+                ), :age_group);
+	    
+            pt = pretty_table(
+                String,
+		temp_table,
+                header = ["Age Group", "Male Prev.", "Female Prev."],
+            )
+            text!(plot_axis, pt; font = "JuliaMono", textsize = 14)
+            xlims!(plot_axis, 0, 2)
+            ylims!(plot_axis, 0, 2)
+            hidespines!(plot_axis)
+            hidedecorations!(plot_axis)
+
+            Label(
+                f[r, c, Top()],
+                "$(pop.race_concept_id |> first)",
+                textsize = 16,
+                font = "TeX Gyre Heros Bold",
+                padding = (0, 0, -40, 0),
+                halign = :center,
+            )
+
+            Label(
+                f[r, c, TopLeft()],
+                "$(subfig_labels[pop_idx])",
+                textsize = 16,
+                font = "TeX Gyre Heros Bold",
+                padding = (0, 20, -40, 0),
+                halign = :right,
+            )
+
+            pop_idx = pop_idx + 1
+        end
+    end
+
+    Label(
+        f[:, :, Top()],
+        "Tab. $(table_counter): Crude Prevalence of Suicidality in Georgia Subpopulations",
+        valign = :center,
+        font = "TeX Gyre Heros Bold",
+        padding = (0, 0, 30, 0),
+        textsize = 20,
+    )
+
+    f
+end
+```
+
+> Table `j table_counter`. **Crude Prevalence of Suicidality in Georgia Subpopulations.**
+> These metrics are the computed values of prevalence for each subpopulation.
+> Any values that had to be suppressed due to patient privacy purposes was denoted as `missing` in these tables.
+
+# Appendix
+
+## Packages Used in Analysis
+
+Package descriptions:
+
+- [`CairoMakie`](https://github.com/JuliaPlots/Makie.jl/tree/master/CairoMakie) - Backend for Makie to produce static vector graphics at publication quality
+
+- [`CSV`](https://github.com/JuliaData/CSV.jl) - Julia's multi-threaded CSV reader
+
+- [`DataFrames`](https://github.com/JuliaData/DataFrames.jl) - Julia's dataframe handler for easily manipulating data
+
+- [`DrWatson`](https://github.com/JuliaDynamics/DrWatson.jl) - Incredibly helpful tool for managing Julia-based scientific experiments and exploration
+
+- [`Makie`](https://github.com/JuliaPlots/Makie.jl) - Data visualization ecosystem for the Julia programming language, with high performance and extensibility
+
+- [`Statistics`](https://github.com/JuliaLang/Statistics.jl) - Julia's standard library for useful statistical methods
