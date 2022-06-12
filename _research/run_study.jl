@@ -29,7 +29,7 @@ conn = DBInterface.connect(LibPQ.Connection, "")
 dialect = :postgresql
 
 MentalHealthEquity.GenerateConnectionDetails(conn,
-    dialect = :postgresql,
+    dialect = dialect,
     schema = "synpuf5"
 )
 

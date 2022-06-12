@@ -1,0 +1,88 @@
+race_concept_id,age_group,gender_concept_id,count,condition
+Other Race,50 - 59,Male,43,Bipolar Disorder
+White,30 - 39,Male,51,Bipolar Disorder
+Black or African American,30 - 39,Female,80,Bipolar Disorder
+Black or African American,60 - 69,Female,51,Bipolar Disorder
+White,60 - 69,Female,61,Bipolar Disorder
+White,40 - 49,Female,113,Bipolar Disorder
+Black or African American,50 - 59,Female,102,Bipolar Disorder
+White,40 - 49,Male,57,Bipolar Disorder
+White,50 - 59,Female,122,Bipolar Disorder
+White,20 - 29,Male,27,Bipolar Disorder
+Black or African American,30 - 39,Male,62,Bipolar Disorder
+Other Race,40 - 49,Female,59,Bipolar Disorder
+White,30 - 39,Female,74,Bipolar Disorder
+Other Race,40 - 49,Male,54,Bipolar Disorder
+Black or African American,20 - 29,Male,55,Bipolar Disorder
+White,50 - 59,Male,65,Bipolar Disorder
+Other Race,50 - 59,Female,84,Bipolar Disorder
+White,60 - 69,Male,31,Bipolar Disorder
+Black or African American,40 - 49,Female,66,Bipolar Disorder
+Black or African American,50 - 59,Male,56,Bipolar Disorder
+Other Race,30 - 39,Female,52,Bipolar Disorder
+Black or African American,40 - 49,Male,51,Bipolar Disorder
+Other Race,30 - 39,Male,50,Bipolar Disorder
+White,70 - 79,Female,18,Bipolar Disorder
+Other Race,60 - 69,Female,20,Bipolar Disorder
+Black or African American,60 - 69,Male,17,Bipolar Disorder
+Other Race,60 - 69,Male,14,Bipolar Disorder
+White,20 - 29,Female,36,Bipolar Disorder
+Other Race,20 - 29,Female,43,Bipolar Disorder
+Black or African American,20 - 29,Female,54,Bipolar Disorder
+Other Race,20 - 29,Male,74,Bipolar Disorder
+Black or African American,10 - 19,Female,44,Bipolar Disorder
+Black or African American,10 - 19,Male,38,Bipolar Disorder
+White,10 - 19,Female,57,Bipolar Disorder
+Other Race,10 - 19,Male,34,Bipolar Disorder
+Other Race,10 - 19,Female,16,Bipolar Disorder
+White,10 - 19,Male,47,Bipolar Disorder
+White,50 - 59,Female,212,Depression
+White,50 - 59,Male,92,Depression
+White,60 - 69,Female,175,Depression
+Other Race,30 - 39,Female,68,Depression
+White,40 - 49,Female,151,Depression
+Other Race,60 - 69,Male,52,Depression
+Other Race,40 - 49,Male,52,Depression
+Black or African American,30 - 39,Female,131,Depression
+Black or African American,40 - 49,Female,144,Depression
+Black or African American,30 - 39,Male,52,Depression
+Black or African American,50 - 59,Female,174,Depression
+White,40 - 49,Male,66,Depression
+White,70 - 79,Female,76,Depression
+White,60 - 69,Male,66,Depression
+Black or African American,70 - 79,Female,23,Depression
+White,70 - 79,Male,17,Depression
+White,30 - 39,Female,137,Depression
+White,20 - 29,Male,14,Depression
+White,30 - 39,Male,51,Depression
+Black or African American,20 - 29,Female,73,Depression
+Black or African American,60 - 69,Female,95,Depression
+Other Race,20 - 29,Male,40,Depression
+Black or African American,40 - 49,Male,56,Depression
+Black or African American,50 - 59,Male,83,Depression
+Other Race,40 - 49,Female,79,Depression
+White,80 - 89,Female,24,Depression
+White,20 - 29,Female,100,Depression
+Black or African American,60 - 69,Male,49,Depression
+Other Race,,8551,22,Depression
+Other Race,50 - 59,Female,133,Depression
+Other Race,30 - 39,Male,34,Depression
+Other Race,50 - 59,Male,98,Depression
+Other Race,60 - 69,Female,58,Depression
+Other Race,20 - 29,Female,68,Depression
+White,10 - 19,Female,148,Depression
+Black or African American,10 - 19,Female,143,Depression
+Other Race,10 - 19,Male,37,Depression
+White,10 - 19,Male,71,Depression
+Black or African American,10 - 19,Male,73,Depression
+Other Race,10 - 19,Female,34,Depression
+Black or African American,20 - 29,Male,33,Depression
+Black or African American,0 - 9,Female,15,Depression
+White,0 - 9,Male,15,Depression
+White,0 - 9,Female,11,Depression
+White,40 - 49,Female,11,Suicidality
+White,30 - 39,Female,15,Suicidality
+White,50 - 59,Female,11,Suicidality
+Other Race,10 - 19,Female,12,Suicidality
+Other Race,50 - 59,Female,14,Suicidality
+White,10 - 19,Female,13,Suicidality
