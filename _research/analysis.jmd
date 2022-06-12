@@ -242,55 +242,46 @@ subpop = filter(row -> row.race_concept_id == "White", depression_subpop)
 
 females = filter(row -> row.gender_concept_id == "Female", subpop)
 males = filter(row -> row.gender_concept_id == "Male", subpop)
-
-female_prev = females.numerators ./ females.denominators * 100
-male_prev = males.numerators ./ males.denominators * 100
 ```
 
-```julia, echo = false
+```julia, echo = false, eval = false
 f = Figure()
 figure_counter += 1
 
 plot_axis = Axis(
     f[1, 1],
-    xtickformat = xs -> ["$(abs(x))%" for x in xs],
-    yticks = (1:length(unique(subpop.age_group)), unique(subpop.age_group)),
+    ytickformat = ys -> ["$(abs(y))%" for y in ys],
+    xticks = (1:length(unique(subpop.age_group)), unique(subpop.age_group)),
     xlabel = "Crude Prevalence (%)",
     ylabel = "Age Group",
 )
 
 barplot!(
-    female_prev,
+    [1:9..., 1:9...],
+    [females.prevalence..., males.prevalence...],
+    dodge = [x % 2 == 0 ? 2 : 1 for x = 1:18],
     bar_labels = :y,
-    label_size = 20,
-    flip_labels_at = (0, 10),
-    label_formatter = x -> round(x; digits = 2) |> abs |> x -> "$(x)%",
-    label_offset = 10,
-    color = :tomato,
-    strokecolor = :black,
-    strokewidth = 1,
-    direction = :x,
-)
-barplot!(
-    male_prev .* -1,
-    bar_labels = :y,
-    label_size = 20,
-    flip_labels_at = (-5, -0),
-    label_formatter = x -> round(x; digits = 2) |> abs |> x -> "$(x)%",
-    label_offset = 10,
-    color = :dodgerblue,
-    strokecolor = :black,
-    strokewidth = 1,
-    direction = :x,
+    label_size = 11,
+    label_formatter = x -> round(x; digits = 1) |> abs |> x -> "$x",
+    label_offset = 0,
+    flip_labels_at = (
+        0,
+        mean(filter(x -> !ismissing(x), females.prevalence)) >
+        mean(filter(x -> !ismissing(x), males.prevalence)) ?
+        mean(filter(x -> !ismissing(x), females.prevalence)) :
+        mean(filter(x -> !ismissing(x), males.prevalence)),
+    ),
+    color = [x % 2 == 0 ? 2 : 1 for x = 1:18],
+    colormap = [:tomato, :dodgerblue],
 )
 
 legend_labels = ["Female", "Male"]
 legend_elements = [PolyElement(polycolor = :tomato), PolyElement(polycolor = :dodgerblue)]
-legend_title = "Colors"
-
-Legend(f[1, 2], legend_elements, legend_labels, legend_title)
+legend_title = "Colors" 
+Legend(f[1, 2], legend_elements, legend_labels, legend_title) 
 
 table_axis = Axis(f[2, :])
+
 pt = pretty_table(
     String,
     hcat(
@@ -300,11 +291,13 @@ pt = pretty_table(
     );
     header = ["Age Group", "Male Num.", "Male Denom.", "Female Num.", "Female Denom."],
 );
+
 text!(table_axis, pt; font = "JuliaMono", textsize = 15);
+
 xlims!(table_axis, 0, 2);
 ylims!(table_axis, 0, 2);
 hidespines!(table_axis);
-hidedecorations!(table_axis);
+hidedecorations!(table_axis); 
 
 Label(
     f[:, :, Top()],
@@ -313,7 +306,7 @@ Label(
     font = "TeX Gyre Heros Bold",
     padding = (0, 0, 20, 0),
     textsize = 20,
-)
+) 
 
 Label(
     f[1, :, TopLeft()],
@@ -322,7 +315,7 @@ Label(
     font = "TeX Gyre Heros Bold",
     padding = (0, 20, -10, 0),
     halign = :right,
-)
+) 
 
 Label(
     f[2, :, TopLeft()],
@@ -331,7 +324,7 @@ Label(
     font = "TeX Gyre Heros Bold",
     padding = (0, 20, -10, 0),
     halign = :right,
-)
+) 
 
 f
 ```
@@ -377,26 +370,20 @@ let
 
             plot_axis = Axis(
                 f[r, c],
-                xtickformat = xs -> ["$(abs(x))%" for x in xs],
-                yticks = (1:length(unique(pop.age_group)), unique(pop.age_group)),
+                ytickformat = ys -> ["$(abs(y))%" for y in ys],
+                xticks = (1:length(unique(pop.age_group)), unique(pop.age_group)),
                 title = "$(pop.race_concept_id |> first)",
-                limits = ((-max_prev, max_prev), (0, length(main.age_group |> unique) + 1)),
+                limits = ((0, length(main.age_group |> unique) + 1), (0, max_prev)),
+		xticklabelrotation = π/4,
             )
 
-            barplot!(
-                females.prevalence,
-                color = :tomato,
-                strokecolor = :black,
-                strokewidth = 1,
-                direction = :x,
-            )
-            barplot!(
-                males.prevalence .* -1,
-                color = :dodgerblue,
-                strokecolor = :black,
-                strokewidth = 1,
-                direction = :x,
-            )
+barplot!(
+    [1:9..., 1:9...],
+    [females.prevalence..., males.prevalence...],
+    dodge = [x % 2 == 0 ? 2 : 1 for x = 1:18],
+    color = [x % 2 == 0 ? 2 : 1 for x = 1:18],
+    colormap = [:tomato, :dodgerblue],
+)
 
             if r == 1
                 Label(
@@ -451,7 +438,7 @@ let
 
     Label(
         f[:, 1:2, Left()],
-        "Age Group",
+        "Crude Prevalence (%)",
         valign = :center,
         padding = (0, 70, 0, 0),
         rotation = π / 2,
@@ -460,9 +447,9 @@ let
 
     Label(
         f[:, :, Bottom()],
-        "Crude Prevalence (%)",
+        "Age Group",
         valign = :center,
-        padding = (-100, 0, 0, 30),
+        padding = (-100, 0, 0, 60),
         textsize = 16,
     )
     f
@@ -581,9 +568,6 @@ Across all groups, the mean crude prevalence rate is `j main.prevalence |> mean�
 By age group, the age group with the highest mean crude prevalence of depression was found to be `j cdf[1, :age_group]` with a value of `j "$(cdf[1, :mean_prevalence])%"`.
 Opposite to that, 
 
-
-
-
 ## Examining Bipolar Disorder Subpopulations
 
 ```julia, echo = false, results = "hidden"
@@ -596,7 +580,7 @@ female_prev = females.numerators ./ females.denominators * 100
 male_prev = males.numerators ./ males.denominators * 100
 ```
 
-```julia, echo = false
+```julia, echo = false, eval = false
 f = Figure()
 figure_counter += 1
 
@@ -722,26 +706,20 @@ let
 
             plot_axis = Axis(
                 f[r, c],
-                xtickformat = xs -> ["$(abs(x))%" for x in xs],
-                yticks = (1:length(unique(pop.age_group)), unique(pop.age_group)),
+                ytickformat = ys -> ["$(abs(y))%" for y in ys],
+                xticks = (1:length(unique(pop.age_group)), unique(pop.age_group)),
                 title = "$(pop.race_concept_id |> first)",
-                limits = ((-max_prev, max_prev), (0, length(main.age_group |> unique))),
+                limits = ((0, length(main.age_group |> unique) + 1), (0, max_prev)),
+		xticklabelrotation = π/4,
             )
 
-            barplot!(
-                females.prevalence,
-                color = :tomato,
-                strokecolor = :black,
-                strokewidth = 1,
-                direction = :x,
-            )
-            barplot!(
-                males.prevalence .* -1,
-                color = :dodgerblue,
-                strokecolor = :black,
-                strokewidth = 1,
-                direction = :x,
-            )
+barplot!(
+    [1:9..., 1:9...],
+    [females.prevalence..., males.prevalence...],
+    dodge = [x % 2 == 0 ? 2 : 1 for x = 1:18],
+    color = [x % 2 == 0 ? 2 : 1 for x = 1:18],
+    colormap = [:tomato, :dodgerblue],
+)
 
             if r == 1
                 Label(
@@ -796,7 +774,7 @@ let
 
     Label(
         f[:, 1:2, Left()],
-        "Age Group",
+        "Crude Prevalence (%)",
         valign = :center,
         padding = (0, 70, 0, 0),
         rotation = π / 2,
@@ -805,9 +783,9 @@ let
 
     Label(
         f[:, :, Bottom()],
-        "Crude Prevalence (%)",
+        "Age Group",
         valign = :center,
-        padding = (-100, 0, 0, 30),
+        padding = (-100, 0, 0, 60),
         textsize = 16,
     )
     f
@@ -913,7 +891,7 @@ female_prev = females.numerators ./ females.denominators * 100
 male_prev = males.numerators ./ males.denominators * 100
 ```
 
-```julia, echo = false
+```julia, echo = false, eval = false
 figure_counter += 1
 
 f = Figure()
@@ -1043,26 +1021,20 @@ let
 
             plot_axis = Axis(
                 f[r, c],
-                xtickformat = xs -> ["$(abs(x))%" for x in xs],
-                yticks = (1:length(unique(pop.age_group)), unique(pop.age_group)),
+                ytickformat = ys -> ["$(abs(y))%" for y in ys],
+                xticks = (1:length(unique(pop.age_group)), unique(pop.age_group)),
                 title = "$(pop.race_concept_id |> first)",
-                limits = ((-max_prev, max_prev), (0, length(main.age_group |> unique))),
+                limits = ((0, length(main.age_group |> unique) + 1), (0, max_prev)),
+		xticklabelrotation = π/4,
             )
 
-            barplot!(
-    		filter(x -> !ismissing(x), females.prevalence) |> x -> isempty(x) ? [0] : x,
-                color = :tomato,
-                strokecolor = :black,
-                strokewidth = 1,
-                direction = :x,
-            )
-            barplot!(
-    		filter(x -> !ismissing(x), males.prevalence .* -1) |> x -> isempty(x) ? [0] : x,
-                color = :dodgerblue,
-                strokecolor = :black,
-                strokewidth = 1,
-                direction = :x,
-            )
+barplot!(
+    [1:9..., 1:9...],
+    [females.prevalence..., males.prevalence...],
+    dodge = [x % 2 == 0 ? 2 : 1 for x = 1:18],
+    color = [x % 2 == 0 ? 2 : 1 for x = 1:18],
+    colormap = [:tomato, :dodgerblue],
+)
 
             if r == 1
                 Label(
@@ -1114,10 +1086,10 @@ let
         padding = (0, 0, 30, 0),
         textsize = 20,
     )
-
+    
     Label(
         f[:, 1:2, Left()],
-        "Age Group",
+        "Crude Prevalence (%)",
         valign = :center,
         padding = (0, 70, 0, 0),
         rotation = π / 2,
@@ -1126,11 +1098,12 @@ let
 
     Label(
         f[:, :, Bottom()],
-        "Crude Prevalence (%)",
+        "Age Group",
         valign = :center,
-        padding = (-100, 0, 0, 30),
+        padding = (-100, 0, 0, 60),
         textsize = 16,
     )
+
     f
 end
 ```
