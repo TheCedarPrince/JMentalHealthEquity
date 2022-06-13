@@ -1,38 +1,56 @@
+using CSV
+using DataFrames
 using Genie
 using Genie.Renderer.Html
-using DataFrames
 using Stipple
 using StippleUI
 using StipplePlotly
 
 WEB_TRANSPORT = Genie.WebChannels
 
-data = DataFrame(
-    hcat([2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019], rand(10, 3)),
-    ["year", "bipolar_disorder", "depression", "suicidality"],
-)
+prevalence = CSV.read("../data/exp_pro/baseline/prevalence.csv", DataFrame)
+for col in names(prevalence)
+	prevalence[:,col]= [ ismissing(x) ? 0 : x for x in prevalence[:,col] ]
+end
 
 pd(x, y, name) =
-    PlotData(x = x, y = y, plot = StipplePlotly.Charts.PLOT_TYPE_SCATTER, name = name)
+    PlotData(x = x, y = y, plot = StipplePlotly.Charts.PLOT_TYPE_BAR, name = name)
 
 @reactive mutable struct StudyModel <: ReactiveModel
-    study_data::R{DataTable} = DataTable(data)
+    study_data::R{DataTable} = DataTable(prevalence)
     table_pagination::DataTablePagination = DataTablePagination(rows_per_page = 3)
 
     plot_data::R{Vector{PlotData}} =
-        [pd(data.year, data[!, col], col) for col in filter(x -> x != "year", names(data))]
+        [pd(1:9, gdf.prevalence, gdf.condition |> first) for gdf in groupby(prevalence, :condition)]
+
     layout::R{PlotLayout} = PlotLayout(
         plot_bgcolor = "#333",
-        title = PlotLayoutTitle(text = "Disease Prevalence versus Year", font = Font(24)),
+        title = PlotLayoutTitle(text = "Disease Prevalence versus Age Group", font = Font(24)),
+	xaxis = [PlotLayoutAxis(xy = "x", title_text = "Age Groups", font = Font(14), tickvals = [1, 2, 3, 4, 5, 6, 7, 8, 9], ticktext = ["0 - 9", "10 - 19", "20 - 29", "30 - 39", "40 - 49", "50 - 59", "60 - 69", "70 - 79", "80 - 89"])],
+	yaxis = [PlotLayoutAxis(xy = "y", title_text = "Prevalence", font = Font(14))]
     )
+
     config::R{PlotConfig} = PlotConfig()
 
-    valone::R{Bool} = true
+    # Condition checkboxes
+    valone::R{Bool} = false
     valtwo::R{Bool} = true
-    valthree::R{Bool} = true
-    valfour::R{Bool} = true
+    valthree::R{Bool} = false
+
+    # Race checkboxes
+    valfour::R{Bool} = false
     valfive::R{Bool} = true
-    cols::R{Vector} = ["year", "bipolar_disorder", "depression", "suicidality"]
+    valsix::R{Bool} = false
+    valseven::R{Bool} = false
+    valeight::R{Bool} = false
+    
+    # Gender checkboxes
+    valnine::R{Bool} = false
+    valten::R{Bool} = true
+
+    condition_cols::R{Vector} = ["Depression"]
+    race_cols::R{Vector} = ["Black or African American"]
+    gender_cols::R{Vector} = ["Female"]
 
     data_loading::R{Bool} = false
 
@@ -41,46 +59,129 @@ end
 Stipple.register_components(StudyModel)
 
 function handler(model)
+
+    #####################
+    # CONDITION FILTERING
+    #####################
     on(model.valone) do val
         if val == true
-            push!(model.cols.o.val, "bipolar_disorder")
+            push!(model.condition_cols.o.val, "Bipolar Disorder")
         else
             deleteat!(
-                model.cols.o.val,
-                findall(x -> x == "bipolar_disorder", model.cols.o.val),
+                model.condition_cols.o.val,
+                findall(x -> x == "Bipolar Disorder", model.condition_cols.o.val),
             )
         end
     end
     on(model.valtwo) do val
         if val == true
-            push!(model.cols.o.val, "depression")
+            push!(model.condition_cols.o.val, "Depression")
         else
-            deleteat!(model.cols.o.val, findall(x -> x == "depression", model.cols.o.val))
+            deleteat!(model.condition_cols.o.val, findall(x -> x == "Depression", model.condition_cols.o.val))
         end
     end
     on(model.valthree) do val
         if val == true
-            push!(model.cols.o.val, "suicidality")
+            push!(model.condition_cols.o.val, "Suicidality")
         else
-            deleteat!(model.cols.o.val, findall(x -> x == "suicidality", model.cols.o.val))
+            deleteat!(model.condition_cols.o.val, findall(x -> x == "Suicidality", model.condition_cols.o.val))
         end
     end
+
+    ################
+    # RACE FILTERING
+    ################
+    on(model.valfour) do val
+        if val == true
+            push!(model.race_cols.o.val, "White")
+        else
+            deleteat!(
+                model.race_cols.o.val,
+                findall(x -> x == "White", model.race_cols.o.val),
+            )
+        end
+    end
+    on(model.valfive) do val
+        if val == true
+            push!(model.race_cols.o.val, "Black or African American")
+        else
+            deleteat!(model.race_cols.o.val, findall(x -> x == "Black or African American", model.race_cols.o.val))
+        end
+    end
+    on(model.valsix) do val
+        if val == true
+            push!(model.race_cols.o.val, "Other Race")
+        else
+            deleteat!(model.race_cols.o.val, findall(x -> x == "Other Race", model.race_cols.o.val))
+        end
+    end
+    on(model.valseven) do val
+        if val == true
+            push!(model.race_cols.o.val, "Asian")
+        else
+            deleteat!(model.race_cols.o.val, findall(x -> x == "Asian", model.race_cols.o.val))
+        end
+    end
+    on(model.valeight) do val
+        if val == true
+            push!(model.race_cols.o.val, "American Indian or Alaska Native")
+        else
+            deleteat!(model.race_cols.o.val, findall(x -> x == "American Indian or Alaska Native", model.race_cols.o.val))
+        end
+    end
+    
+    ##################
+    # GENDER FILTERING
+    ##################
+    on(model.valnine) do val
+        if val == true
+            push!(model.gender_cols.o.val, "Male")
+        else
+            deleteat!(model.gender_cols.o.val, findall(x -> x == "Male", model.gender_cols.o.val))
+        end
+    end
+    on(model.valten) do val
+        if val == true
+            push!(model.gender_cols.o.val, "Female")
+        else
+            deleteat!(model.gender_cols.o.val, findall(x -> x == "Female", model.gender_cols.o.val))
+        end
+    end
+    
     model
 end
 
 function filterdata(model)
     model.data_loading[] = true
-    model.study_data[] = DataTable(data[:, model.cols.o.val])
+    model.study_data[] = DataTable(
+        filter(
+            row ->
+                in(row.condition, model.condition_cols.o.val) &&
+                    in(row.race_concept_id, model.race_cols.o.val)
+		&&
+		    in(row.gender_concept_id, model.gender_cols.o.val),
+            prevalence,
+        ),
+    )
     model.plot_data[] = [
-        pd(data.year, data[!, col], col) for
-        col in filter(x -> x != "year", model.cols.o.val)
+        pd(1:9, gdf.prevalence, gdf.condition |> first) for gdf in groupby(
+            filter(
+                row ->
+                    in(row.condition, model.condition_cols.o.val) &&
+                        in(row.race_concept_id, model.race_cols.o.val)
+			&&
+		    in(row.gender_concept_id, model.gender_cols.o.val),
+                prevalence,
+            ),
+            :condition,
+        )
     ]
     model.data_loading[] = false
 end
 
 function ui(model::StudyModel)
 
-    onany(model.valone, model.valtwo, model.valthree) do (_...)
+    onany(model.valone, model.valtwo, model.valthree, model.valfour, model.valfive, model.valsix, model.valseven, model.valeight, model.valnine, model.valten) do (_...)
         filterdata(model)
     end
 
@@ -106,7 +207,7 @@ function ui(model::StudyModel)
                         }
                         """),
         [
-            heading("Study Data Explorer")
+            heading("Baseline Data Explorer: Assessing Health Equity in Mental Healthcare Delivery Using a Federated Network Research Model")
             row(
                 cell(
                     class = "container",
@@ -133,9 +234,9 @@ function ui(model::StudyModel)
                 cell(
                     class = "st-module",
                     [
-                        checkbox(label = "bipolar_disorder", fieldname = :valone),
-                        checkbox(label = "depression", fieldname = :valtwo),
-                        checkbox(label = "suicidality", fieldname = :valthree),
+                        checkbox(label = "Bipolar Disorder", fieldname = :valone),
+                        checkbox(label = "Depression", fieldname = :valtwo),
+                        checkbox(label = "Suicidality", fieldname = :valthree),
                     ],
                 ),
             )
@@ -143,8 +244,20 @@ function ui(model::StudyModel)
                 cell(
                     class = "st-module",
                     [
-                        checkbox(label = "source_1", fieldname = :valfour),
-                        checkbox(label = "source_2", fieldname = :valfive),
+                        checkbox(label = "White", fieldname = :valfour),
+                        checkbox(label = "Black or African American", fieldname = :valfive),
+                        checkbox(label = "Other Race", fieldname = :valsix),
+                        checkbox(label = "Asian", fieldname = :valseven),
+                        checkbox(label = "American Indian or Alaska Native", fieldname = :valeight),
+                    ],
+                ),
+            )
+            row(
+                cell(
+                    class = "st-module",
+                    [
+                        checkbox(label = "Male", fieldname = :valnine),
+                        checkbox(label = "Female", fieldname = :valten),
                     ],
                 ),
             )
