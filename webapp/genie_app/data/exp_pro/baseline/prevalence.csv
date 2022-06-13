@@ -1,0 +1,271 @@
+condition,race_concept_id,gender_concept_id,age_group,numerators,denominators,prevalence
+Bipolar Disorder,White,Male,0 - 9,443,181376,0.24
+Bipolar Disorder,White,Female,0 - 9,242,173677,0.14
+Bipolar Disorder,Black or African American,Male,0 - 9,255,179628,0.14
+Bipolar Disorder,Black or African American,Female,0 - 9,111,178556,0.06
+Bipolar Disorder,Other Race,Male,0 - 9,153,56350,0.27
+Bipolar Disorder,Other Race,Female,0 - 9,80,49299,0.16
+Bipolar Disorder,Asian,Male,10 - 19,12,5512,0.22
+Bipolar Disorder,White,Male,10 - 19,1847,121943,1.51
+Bipolar Disorder,White,Female,10 - 19,1884,123296,1.53
+Bipolar Disorder,Black or African American,Male,10 - 19,1370,139007,0.99
+Bipolar Disorder,Black or African American,Female,10 - 19,1418,143543,0.99
+Bipolar Disorder,Other Race,Male,10 - 19,1059,34856,3.04
+Bipolar Disorder,Other Race,Female,10 - 19,607,26775,2.27
+Bipolar Disorder,Asian,Female,20 - 29,12,1738,0.69
+Bipolar Disorder,White,Male,20 - 29,301,6872,4.38
+Bipolar Disorder,White,Female,20 - 29,1753,62185,2.82
+Bipolar Disorder,Black or African American,Male,20 - 29,544,9486,5.73
+Bipolar Disorder,Black or African American,Female,20 - 29,1339,83652,1.6
+Bipolar Disorder,Other Race,Male,20 - 29,1129,26446,4.27
+Bipolar Disorder,Other Race,Female,20 - 29,923,28353,3.26
+Bipolar Disorder,Asian,Female,30 - 39,15,1880,0.8
+Bipolar Disorder,White,Male,30 - 39,548,11472,4.78
+Bipolar Disorder,White,Female,30 - 39,2560,45055,5.68
+Bipolar Disorder,Black or African American,Male,30 - 39,620,13000,4.77
+Bipolar Disorder,Black or African American,Female,30 - 39,1846,66374,2.78
+Bipolar Disorder,Other Race,Male,30 - 39,718,14499,4.95
+Bipolar Disorder,Other Race,Female,30 - 39,1002,19559,5.12
+Bipolar Disorder,Asian,Female,40 - 49,17,793,2.14
+Bipolar Disorder,White,Male,40 - 49,452,11084,4.08
+Bipolar Disorder,White,Female,40 - 49,1553,21372,7.27
+Bipolar Disorder,Black or African American,Male,40 - 49,493,12447,3.96
+Bipolar Disorder,Black or African American,Female,40 - 49,1374,32620,4.21
+Bipolar Disorder,Other Race,Male,40 - 49,697,11505,6.06
+Bipolar Disorder,Other Race,Female,40 - 49,1434,15053,9.53
+Bipolar Disorder,White,Male,50 - 59,446,13177,3.38
+Bipolar Disorder,White,Female,50 - 59,942,17324,5.44
+Bipolar Disorder,Black or African American,Male,50 - 59,589,19352,3.04
+Bipolar Disorder,Black or African American,Female,50 - 59,1242,29200,4.25
+Bipolar Disorder,Other Race,Male,50 - 59,810,21168,3.83
+Bipolar Disorder,Other Race,Female,50 - 59,1738,23658,7.35
+Bipolar Disorder,White,Male,60 - 69,215,13506,1.59
+Bipolar Disorder,White,Female,60 - 69,482,21943,2.2
+Bipolar Disorder,Black or African American,Male,60 - 69,215,18641,1.15
+Bipolar Disorder,Black or African American,Female,60 - 69,483,30704,1.57
+Bipolar Disorder,Other Race,Male,60 - 69,234,13298,1.76
+Bipolar Disorder,Other Race,Female,60 - 69,600,17894,3.35
+Bipolar Disorder,White,Male,70 - 79,77,10916,0.71
+Bipolar Disorder,White,Female,70 - 79,197,21678,0.91
+Bipolar Disorder,Black or African American,Male,70 - 79,30,10446,0.29
+Bipolar Disorder,Black or African American,Female,70 - 79,93,23103,0.4
+Bipolar Disorder,Other Race,Male,70 - 79,18,5063,0.36
+Bipolar Disorder,Other Race,Female,70 - 79,76,9418,0.81
+Bipolar Disorder,White,Male,80 - 89,19,4923,0.39
+Bipolar Disorder,White,Female,80 - 89,71,14840,0.48
+Bipolar Disorder,Black or African American,Female,80 - 89,37,12963,0.29
+Depression,White,Male,0 - 9,774,181376,0.43
+Depression,White,Female,0 - 9,618,173677,0.36
+Depression,Black or African American,Male,0 - 9,660,179628,0.37
+Depression,Black or African American,Female,0 - 9,551,178556,0.31
+Depression,Other Race,Male,0 - 9,127,56350,0.23
+Depression,Other Race,Female,0 - 9,87,49299,0.18
+Depression,Asian,Male,10 - 19,43,5512,0.78
+Depression,Asian,Female,10 - 19,87,5261,1.65
+Depression,American Indian or Alaska Native,Male,10 - 19,11,322,3.42
+Depression,American Indian or Alaska Native,Female,10 - 19,15,411,3.65
+Depression,White,Male,10 - 19,4475,121943,3.67
+Depression,White,Female,10 - 19,7955,123296,6.45
+Depression,Black or African American,Male,10 - 19,3618,139007,2.6
+Depression,Black or African American,Female,10 - 19,5444,143543,3.79
+Depression,Other Race,Male,10 - 19,1243,34856,3.57
+Depression,Other Race,Female,10 - 19,1146,26775,4.28
+Depression,Asian,Male,20 - 29,13,273,4.76
+Depression,Asian,Female,20 - 29,44,1738,2.53
+Depression,White,Male,20 - 29,442,6872,6.43
+Depression,White,Female,20 - 29,4820,62185,7.75
+Depression,Black or African American,Male,20 - 29,666,9486,7.02
+Depression,Black or African American,Female,20 - 29,3616,83652,4.32
+Depression,Other Race,Male,20 - 29,1235,26446,4.67
+Depression,Other Race,Female,20 - 29,1344,28353,4.74
+Depression,Asian,Male,30 - 39,12,542,2.21
+Depression,Asian,Female,30 - 39,49,1880,2.61
+Depression,American Indian or Alaska Native,Female,30 - 39,18,203,8.87
+Depression,White,Male,30 - 39,999,11472,8.71
+Depression,White,Female,30 - 39,6423,45055,14.26
+Depression,Black or African American,Male,30 - 39,860,13000,6.62
+Depression,Black or African American,Female,30 - 39,5190,66374,7.82
+Depression,Other Race,Male,30 - 39,865,14499,5.97
+Depression,Other Race,Female,30 - 39,1437,19559,7.35
+Depression,Asian,Male,40 - 49,14,464,3.02
+Depression,Asian,Female,40 - 49,46,793,5.8
+Depression,American Indian or Alaska Native,Female,40 - 49,17,101,16.83
+Depression,White,Male,40 - 49,1008,11084,9.09
+Depression,White,Female,40 - 49,3802,21372,17.79
+Depression,Black or African American,Male,40 - 49,922,12447,7.41
+Depression,Black or African American,Female,40 - 49,3690,32620,11.31
+Depression,Other Race,Male,40 - 49,1056,11505,9.18
+Depression,Other Race,Female,40 - 49,2186,15053,14.52
+Depression,Asian,Female,50 - 59,38,431,8.82
+Depression,American Indian or Alaska Native,Female,50 - 59,17,93,18.28
+Depression,White,Male,50 - 59,1091,13177,8.28
+Depression,White,Female,50 - 59,2496,17324,14.41
+Depression,Black or African American,Male,50 - 59,1366,19352,7.06
+Depression,Black or African American,Female,50 - 59,3331,29200,11.41
+Depression,Other Race,Male,50 - 59,1956,21168,9.24
+Depression,Other Race,Female,50 - 59,3871,23658,16.36
+Depression,Asian,Male,60 - 69,11,863,1.27
+Depression,Asian,Female,60 - 69,31,1342,2.31
+Depression,White,Male,60 - 69,648,13506,4.8
+Depression,White,Female,60 - 69,1562,21943,7.12
+Depression,Black or African American,Male,60 - 69,718,18641,3.85
+Depression,Black or African American,Female,60 - 69,1584,30704,5.16
+Depression,Other Race,Male,60 - 69,814,13298,6.12
+Depression,Other Race,Female,60 - 69,1891,17894,10.57
+Depression,Asian,Male,70 - 79,18,1687,1.07
+Depression,Asian,Female,70 - 79,41,2433,1.69
+Depression,White,Male,70 - 79,320,10916,2.93
+Depression,White,Female,70 - 79,848,21678,3.91
+Depression,Black or African American,Male,70 - 79,159,10446,1.52
+Depression,Black or African American,Female,70 - 79,488,23103,2.11
+Depression,Other Race,Male,70 - 79,106,5063,2.09
+Depression,Other Race,Female,70 - 79,367,9418,3.9
+Depression,Asian,Female,80 - 89,26,1234,2.11
+Depression,White,Male,80 - 89,139,4923,2.82
+Depression,White,Female,80 - 89,539,14840,3.63
+Depression,Black or African American,Male,80 - 89,74,3841,1.93
+Depression,Black or African American,Female,80 - 89,251,12963,1.94
+Depression,Other Race,Male,80 - 89,23,1843,1.25
+Depression,Other Race,Female,80 - 89,111,4717,2.35
+Suicidality,White,Male,0 - 9,63,181376,0.03
+Suicidality,White,Female,0 - 9,30,173677,0.02
+Suicidality,Black or African American,Male,0 - 9,80,179628,0.04
+Suicidality,Black or African American,Female,0 - 9,30,178556,0.02
+Suicidality,Other Race,Male,0 - 9,22,56350,0.04
+Suicidality,Asian,Female,10 - 19,15,5261,0.29
+Suicidality,White,Male,10 - 19,793,121943,0.65
+Suicidality,White,Female,10 - 19,1398,123296,1.13
+Suicidality,Black or African American,Male,10 - 19,616,139007,0.44
+Suicidality,Black or African American,Female,10 - 19,1031,143543,0.72
+Suicidality,Other Race,Male,10 - 19,308,34856,0.88
+Suicidality,Other Race,Female,10 - 19,285,26775,1.06
+Suicidality,White,Male,20 - 29,75,6872,1.09
+Suicidality,White,Female,20 - 29,363,62185,0.58
+Suicidality,Black or African American,Male,20 - 29,141,9486,1.49
+Suicidality,Black or African American,Female,20 - 29,380,83652,0.45
+Suicidality,Other Race,Male,20 - 29,275,26446,1.04
+Suicidality,Other Race,Female,20 - 29,228,28353,0.8
+Suicidality,Asian,Female,30 - 39,11,1880,0.59
+Suicidality,White,Male,30 - 39,142,11472,1.24
+Suicidality,White,Female,30 - 39,471,45055,1.05
+Suicidality,Black or African American,Male,30 - 39,179,13000,1.38
+Suicidality,Black or African American,Female,30 - 39,357,66374,0.54
+Suicidality,Other Race,Male,30 - 39,210,14499,1.45
+Suicidality,Other Race,Female,30 - 39,194,19559,0.99
+Suicidality,White,Male,40 - 49,124,11084,1.12
+Suicidality,White,Female,40 - 49,255,21372,1.19
+Suicidality,Black or African American,Male,40 - 49,182,12447,1.46
+Suicidality,Black or African American,Female,40 - 49,243,32620,0.74
+Suicidality,Other Race,Male,40 - 49,213,11505,1.85
+Suicidality,Other Race,Female,40 - 49,242,15053,1.61
+Suicidality,White,Male,50 - 59,120,13177,0.91
+Suicidality,White,Female,50 - 59,125,17324,0.72
+Suicidality,Black or African American,Male,50 - 59,210,19352,1.09
+Suicidality,Black or African American,Female,50 - 59,206,29200,0.71
+Suicidality,Other Race,Male,50 - 59,266,21168,1.26
+Suicidality,Other Race,Female,50 - 59,319,23658,1.35
+Suicidality,White,Male,60 - 69,49,13506,0.36
+Suicidality,White,Female,60 - 69,55,21943,0.25
+Suicidality,Black or African American,Male,60 - 69,59,18641,0.32
+Suicidality,Black or African American,Female,60 - 69,66,30704,0.21
+Suicidality,Other Race,Male,60 - 69,81,13298,0.61
+Suicidality,Other Race,Female,60 - 69,87,17894,0.49
+Suicidality,Black or African American,Female,70 - 79,11,23103,0.05
+Suicidality,Other Race,Female,70 - 79,13,9418,0.14
+Bipolar Disorder,Asian,Male,0 - 9,,,
+Depression,Asian,Male,0 - 9,,,
+Suicidality,Asian,Male,0 - 9,,,
+Bipolar Disorder,American Indian or Alaska Native,Male,0 - 9,,,
+Depression,American Indian or Alaska Native,Male,0 - 9,,,
+Suicidality,American Indian or Alaska Native,Male,0 - 9,,,
+Suicidality,Other Race,Female,0 - 9,,,
+Bipolar Disorder,Asian,Female,0 - 9,,,
+Depression,Asian,Female,0 - 9,,,
+Suicidality,Asian,Female,0 - 9,,,
+Bipolar Disorder,American Indian or Alaska Native,Female,0 - 9,,,
+Depression,American Indian or Alaska Native,Female,0 - 9,,,
+Suicidality,American Indian or Alaska Native,Female,0 - 9,,,
+Suicidality,Asian,Male,10 - 19,,,
+Bipolar Disorder,American Indian or Alaska Native,Male,10 - 19,,,
+Suicidality,American Indian or Alaska Native,Male,10 - 19,,,
+Bipolar Disorder,Asian,Female,10 - 19,,,
+Bipolar Disorder,American Indian or Alaska Native,Female,10 - 19,,,
+Suicidality,American Indian or Alaska Native,Female,10 - 19,,,
+Bipolar Disorder,Asian,Male,20 - 29,,,
+Suicidality,Asian,Male,20 - 29,,,
+Bipolar Disorder,American Indian or Alaska Native,Male,20 - 29,,,
+Depression,American Indian or Alaska Native,Male,20 - 29,,,
+Suicidality,American Indian or Alaska Native,Male,20 - 29,,,
+Suicidality,Asian,Female,20 - 29,,,
+Bipolar Disorder,American Indian or Alaska Native,Female,20 - 29,,,
+Depression,American Indian or Alaska Native,Female,20 - 29,,,
+Suicidality,American Indian or Alaska Native,Female,20 - 29,,,
+Bipolar Disorder,Asian,Male,30 - 39,,,
+Suicidality,Asian,Male,30 - 39,,,
+Bipolar Disorder,American Indian or Alaska Native,Male,30 - 39,,,
+Depression,American Indian or Alaska Native,Male,30 - 39,,,
+Suicidality,American Indian or Alaska Native,Male,30 - 39,,,
+Bipolar Disorder,American Indian or Alaska Native,Female,30 - 39,,,
+Suicidality,American Indian or Alaska Native,Female,30 - 39,,,
+Bipolar Disorder,Asian,Male,40 - 49,,,
+Suicidality,Asian,Male,40 - 49,,,
+Bipolar Disorder,American Indian or Alaska Native,Male,40 - 49,,,
+Depression,American Indian or Alaska Native,Male,40 - 49,,,
+Suicidality,American Indian or Alaska Native,Male,40 - 49,,,
+Suicidality,Asian,Female,40 - 49,,,
+Bipolar Disorder,American Indian or Alaska Native,Female,40 - 49,,,
+Suicidality,American Indian or Alaska Native,Female,40 - 49,,,
+Bipolar Disorder,Asian,Male,50 - 59,,,
+Depression,Asian,Male,50 - 59,,,
+Suicidality,Asian,Male,50 - 59,,,
+Bipolar Disorder,American Indian or Alaska Native,Male,50 - 59,,,
+Depression,American Indian or Alaska Native,Male,50 - 59,,,
+Suicidality,American Indian or Alaska Native,Male,50 - 59,,,
+Bipolar Disorder,Asian,Female,50 - 59,,,
+Suicidality,Asian,Female,50 - 59,,,
+Bipolar Disorder,American Indian or Alaska Native,Female,50 - 59,,,
+Suicidality,American Indian or Alaska Native,Female,50 - 59,,,
+Bipolar Disorder,Asian,Male,60 - 69,,,
+Suicidality,Asian,Male,60 - 69,,,
+Bipolar Disorder,American Indian or Alaska Native,Male,60 - 69,,,
+Depression,American Indian or Alaska Native,Male,60 - 69,,,
+Suicidality,American Indian or Alaska Native,Male,60 - 69,,,
+Bipolar Disorder,Asian,Female,60 - 69,,,
+Suicidality,Asian,Female,60 - 69,,,
+Bipolar Disorder,American Indian or Alaska Native,Female,60 - 69,,,
+Depression,American Indian or Alaska Native,Female,60 - 69,,,
+Suicidality,American Indian or Alaska Native,Female,60 - 69,,,
+Suicidality,White,Male,70 - 79,,,
+Suicidality,Black or African American,Male,70 - 79,,,
+Suicidality,Other Race,Male,70 - 79,,,
+Bipolar Disorder,Asian,Male,70 - 79,,,
+Suicidality,Asian,Male,70 - 79,,,
+Bipolar Disorder,American Indian or Alaska Native,Male,70 - 79,,,
+Depression,American Indian or Alaska Native,Male,70 - 79,,,
+Suicidality,American Indian or Alaska Native,Male,70 - 79,,,
+Suicidality,White,Female,70 - 79,,,
+Bipolar Disorder,Asian,Female,70 - 79,,,
+Suicidality,Asian,Female,70 - 79,,,
+Bipolar Disorder,American Indian or Alaska Native,Female,70 - 79,,,
+Depression,American Indian or Alaska Native,Female,70 - 79,,,
+Suicidality,American Indian or Alaska Native,Female,70 - 79,,,
+Suicidality,White,Male,80 - 89,,,
+Bipolar Disorder,Black or African American,Male,80 - 89,,,
+Suicidality,Black or African American,Male,80 - 89,,,
+Bipolar Disorder,Other Race,Male,80 - 89,,,
+Suicidality,Other Race,Male,80 - 89,,,
+Bipolar Disorder,Asian,Male,80 - 89,,,
+Depression,Asian,Male,80 - 89,,,
+Suicidality,Asian,Male,80 - 89,,,
+Bipolar Disorder,American Indian or Alaska Native,Male,80 - 89,,,
+Depression,American Indian or Alaska Native,Male,80 - 89,,,
+Suicidality,American Indian or Alaska Native,Male,80 - 89,,,
+Suicidality,White,Female,80 - 89,,,
+Suicidality,Black or African American,Female,80 - 89,,,
+Bipolar Disorder,Other Race,Female,80 - 89,,,
+Suicidality,Other Race,Female,80 - 89,,,
+Bipolar Disorder,Asian,Female,80 - 89,,,
+Suicidality,Asian,Female,80 - 89,,,
+Bipolar Disorder,American Indian or Alaska Native,Female,80 - 89,,,
+Depression,American Indian or Alaska Native,Female,80 - 89,,,
+Suicidality,American Indian or Alaska Native,Female,80 - 89,,,
