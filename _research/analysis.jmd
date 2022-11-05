@@ -25,7 +25,7 @@ The data used in this study was generated from the study, "Assessing Health Equi
 We can now load the `numerators` dataset:
 
 ```julia, echo = false, results = "hidden"
-numerators = CSV.read("../data/exp_pro/numerators.csv", DataFrame)
+numerators = CSV.read("../data/exp_pro/baseline/numerators.csv", DataFrame)
 numerators = numerators[!, [:condition, :race_concept_id, :gender_concept_id, :age_group, :count]]
 ```
 
@@ -56,7 +56,7 @@ The reason why this dataset is called `numerators` is because everyone represent
 We can now load the `denominators` dataset:
 
 ```julia, echo = false, results = "hidden"
-denominators = CSV.read("../data/exp_pro/denominators.csv", DataFrame)
+denominators = CSV.read("../data/exp_pro/baseline/denominators.csv", DataFrame)
 denominators = denominators[!, [:race_concept_id, :gender_concept_id, :age_group, :count]]
 ```
 
@@ -292,7 +292,7 @@ pt = pretty_table(
     header = ["Age Group", "Male Num.", "Male Denom.", "Female Num.", "Female Denom."],
 );
 
-text!(table_axis, pt; font = "JuliaMono", textsize = 15);
+text!(table_axis, pt; font = "JuliaMono Medium", textsize = 15);
 
 xlims!(table_axis, 0, 2);
 ylims!(table_axis, 0, 2);
@@ -498,7 +498,7 @@ let
 		temp_table,
                 header = ["Age Group", "Male Prev.", "Female Prev."],
             )
-            text!(plot_axis, pt; font = "JuliaMono", textsize = 14)
+            text!(plot_axis, pt; font = "JuliaMono Medium", textsize = 14)
             xlims!(plot_axis, 0, 2)
             ylims!(plot_axis, 0, 2)
             hidespines!(plot_axis)
@@ -633,7 +633,7 @@ pt = pretty_table(
     );
     header = ["Age Group", "Male Num.", "Male Denom.", "Female Num.", "Female Denom."],
 );
-text!(table_axis, pt; font = "JuliaMono", textsize = 15);
+text!(table_axis, pt; font = "JuliaMono Medium", textsize = 15);
 xlims!(table_axis, 0, 2);
 ylims!(table_axis, 0, 2);
 hidespines!(table_axis);
@@ -834,7 +834,7 @@ let
 		temp_table,
                 header = ["Age Group", "Male Prev.", "Female Prev."],
             )
-            text!(plot_axis, pt; font = "JuliaMono", textsize = 14)
+            text!(plot_axis, pt; font = "JuliaMono Medium", textsize = 14)
             xlims!(plot_axis, 0, 2)
             ylims!(plot_axis, 0, 2)
             hidespines!(plot_axis)
@@ -948,7 +948,7 @@ pt = pretty_table(
     );
     header = ["Age Group", "Male Num.", "Male Denom.", "Female Num.", "Female Denom."],
 );
-text!(table_axis, pt; font = "JuliaMono", textsize = 15);
+text!(table_axis, pt; font = "JuliaMono Medium", textsize = 15);
 xlims!(table_axis, 0, 2);
 ylims!(table_axis, 0, 2);
 hidespines!(table_axis);
@@ -1150,7 +1150,7 @@ let
 		temp_table,
                 header = ["Age Group", "Male Prev.", "Female Prev."],
             )
-            text!(plot_axis, pt; font = "JuliaMono", textsize = 14)
+            text!(plot_axis, pt; font = "JuliaMono Medium", textsize = 14)
             xlims!(plot_axis, 0, 2)
             ylims!(plot_axis, 0, 2)
             hidespines!(plot_axis)
@@ -1212,3 +1212,5 @@ Package descriptions:
 - [`Makie`](https://github.com/JuliaPlots/Makie.jl) - Data visualization ecosystem for the Julia programming language, with high performance and extensibility
 
 - [`Statistics`](https://github.com/JuliaLang/Statistics.jl) - Julia's standard library for useful statistical methods
+
+
